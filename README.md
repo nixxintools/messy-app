@@ -2,6 +2,8 @@
 
 **Secure messaging for festivals, events, and crowds — when the mobile network can't keep up.**
 
+**📦 [Download the APK — latest release](https://github.com/nixxintools/messy-app/releases/latest)** · Android 10+, sideload directly, no Play Store needed
+
 <p>
   <img src="assets/icon/icon.png" width="96" alt="Messy logo — a yellow mesh web">
 </p>
