@@ -47,6 +47,10 @@ class MeshRouter {
   void Function(AuthenticatedLink from, Map<String, Object?> body)?
       onContactAccept;
 
+  /// Fired for every locally-delivered incoming message (1:1, public,
+  /// completed media) — the UI layer decides whether to notify.
+  void Function(String chatId, String title, String body)? onIncoming;
+
   void start() {
     connectivity.onLinkUp.listen((auth) {
       // setFrameHandler replays anything the peer sent before this event
@@ -328,6 +332,11 @@ class MeshRouter {
             status: Value(domain.MessageStatus.delivered.index),
           ),
         );
+    onIncoming?.call(
+      publicRoomName,
+      'Local · ${(body['n'] as String?) ?? 'someone nearby'}',
+      (body['t'] as String?) ?? '',
+    );
   }
 
   Future<void> _deliverToMe(Envelope env) async {
@@ -406,6 +415,11 @@ class MeshRouter {
           ),
         );
     await _sendReceipt(env);
+    onIncoming?.call(
+      chatId,
+      (body['n'] as String?) ?? chatId.substring(0, 8),
+      (body['t'] as String?) ?? '',
+    );
   }
 
   Future<void> _deliverManifest(Envelope env, List<int> plain) async {
@@ -479,6 +493,21 @@ class MeshRouter {
     await (db.delete(db.mediaChunks)..where((c) => c.mediaId.equals(mediaId)))
         .go();
     await _sendReceipt(env);
+    final msg = await (db.select(db.messages)
+          ..where((m) => m.messageId.equals(media.messageId)))
+        .getSingleOrNull();
+    if (msg != null) {
+      final contact = await (db.select(db.contacts)
+            ..where((c) => c.nodeId.equals(msg.chatId)))
+          .getSingleOrNull();
+      final kind =
+          media.mimeType.startsWith('video/') ? 'a video' : 'a photo';
+      onIncoming?.call(
+        msg.chatId,
+        contact?.displayName ?? msg.chatId.substring(0, 8),
+        'Sent you $kind',
+      );
+    }
   }
 
   Future<void> _sendReceipt(Envelope original) async {

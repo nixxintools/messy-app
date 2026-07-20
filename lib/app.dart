@@ -7,6 +7,22 @@ import 'ui/screens/onboarding/onboarding_screen.dart';
 import 'ui/screens/security/pin_screens.dart';
 
 const messyYellow = Color(0xFFFFD60A);
+const messyOnYellow = Color(0xFF201A00);
+
+/// ColorScheme.fromSeed desaturates the primary heavily in dark mode; pin
+/// the roles that drive buttons/highlights to the true brand yellow.
+ColorScheme _messyScheme() =>
+    ColorScheme.fromSeed(seedColor: messyYellow, brightness: Brightness.dark)
+        .copyWith(
+      primary: messyYellow,
+      onPrimary: messyOnYellow,
+      primaryContainer: messyYellow,
+      onPrimaryContainer: messyOnYellow,
+      secondary: messyYellow,
+      secondaryContainer: messyYellow,
+      onSecondaryContainer: messyOnYellow,
+      tertiary: messyYellow,
+    );
 
 class MessyApp extends ConsumerWidget {
   const MessyApp({super.key});
@@ -17,10 +33,7 @@ class MessyApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Messy',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: messyYellow,
-          brightness: Brightness.dark,
-        ),
+        colorScheme: _messyScheme(),
         useMaterial3: true,
       ),
       home: gate.when(

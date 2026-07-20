@@ -1,16 +1,16 @@
-# Messy 🕸️
+<p align="center">
+  <img src="assets/icon/icon.png" width="128" alt="Messy logo — a yellow mesh web">
+</p>
 
-**Secure messaging for festivals, events, and crowds — when the mobile network can't keep up.**
+# Messy
+
+**Secure messaging for the mountains, festivals, planes, and crowds — anywhere the mobile network can't reach or can't keep up.**
 
 **📦 [Download the APK — latest release](https://github.com/nixxintools/messy-app/releases/latest)** · Android 10+, sideload directly, no Play Store needed
 
-<p>
-  <img src="assets/icon/icon.png" width="96" alt="Messy logo — a yellow mesh web">
-</p>
-
 ## Why Messy exists
 
-Anyone who's been to a big festival, stadium, or conference knows the moment: 40,000 phones hit one cell tower, and suddenly nothing sends. You're standing 200 meters from your friends and can't tell them where you are.
+Sometimes there's simply no network: a trail deep in the mountains, a long-haul flight, a campsite past the last cell tower. And sometimes there's a network that can't cope: a big festival or stadium where 40,000 phones hit one tower and suddenly nothing sends, while you stand 200 meters from your friends unable to tell them where you are.
 
 Messy is built for exactly that moment. It doesn't use the mobile network at all:
 
@@ -57,9 +57,10 @@ Working v1 (Android):
 - ✅ Encrypted 1:1 text over any shared Wi-Fi or phone hotspot
 - ✅ Public "Local" room with 24 h expiry
 - ✅ Store-and-forward mesh relaying (always on — it's what makes the mesh work)
-- ✅ Photo/video transfer with resume
+- ✅ Photo/video transfer with resume · videos auto-compressed to 720p
 - ✅ Disappearing messages + 24 h auto-wipe (on by default)
-- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, background relay foreground-service, opportunistic internet P2P (WebRTC, serverless), video compression, forward secrecy (X3DH/ratchet)
+- ✅ Background mesh: foreground service keeps receiving/relaying with the screen off
+- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, opportunistic internet P2P (WebRTC, serverless), forward secrecy — adopting the [Signal protocol via libsignal](https://github.com/signalapp/libsignal) (X3DH + Double Ratchet) is the reference direction
 
 ## Build & run
 

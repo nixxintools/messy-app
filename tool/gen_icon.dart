@@ -54,20 +54,21 @@ img.Image renderWeb({
 void main() {
   Directory('assets/icon').createSync(recursive: true);
 
-  // Full icon (legacy launchers): web fills most of the square on dark bg.
+  // Full icon (legacy launchers): web fills nearly the whole square.
   final full = renderWeb(
     size: 1024,
-    maxRadius: 400,
-    stroke: 30,
+    maxRadius: 480,
+    stroke: 40,
     opaqueBackground: true,
   );
   File('assets/icon/icon.png').writeAsBytesSync(img.encodePng(full));
 
-  // Adaptive foreground: transparent, glyph inside the 66% safe zone.
+  // Adaptive foreground: transparent, glyph filling the 66% safe zone
+  // (radius ~338 of 1024) with a thicker stroke so it reads at small sizes.
   final fg = renderWeb(
     size: 1024,
-    maxRadius: 280,
-    stroke: 24,
+    maxRadius: 330,
+    stroke: 30,
     opaqueBackground: false,
   );
   File('assets/icon/icon_fg.png').writeAsBytesSync(img.encodePng(fg));

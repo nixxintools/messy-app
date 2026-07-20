@@ -119,6 +119,7 @@ class _ChatTile extends StatelessWidget {
       onTap: onTap,
       leading: CircleAvatar(
         backgroundColor: isPublic ? scheme.primaryContainer : null,
+        foregroundColor: isPublic ? scheme.onPrimaryContainer : null,
         child: Icon(isPublic ? Icons.campaign : Icons.person),
       ),
       title: Row(
@@ -150,7 +151,13 @@ class _ChatTile extends StatelessWidget {
         color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(text, style: Theme.of(context).textTheme.labelSmall),
+      child: Text(
+        text,
+        style: Theme.of(context)
+            .textTheme
+            .labelSmall
+            ?.copyWith(color: scheme.onPrimaryContainer),
+      ),
     );
   }
 }

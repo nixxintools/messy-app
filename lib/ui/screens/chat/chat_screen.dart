@@ -186,7 +186,9 @@ class _MessageBubble extends ConsumerWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
         decoration: BoxDecoration(
-          color: mine ? scheme.primaryContainer : scheme.surfaceContainerHigh,
+          // Dark gold for own bubbles (white text stays readable); the
+          // bright brand yellow is reserved for buttons and highlights.
+          color: mine ? const Color(0xFF4A3F0D) : scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(14).copyWith(
             bottomRight: mine ? const Radius.circular(3) : null,
             bottomLeft: mine ? null : const Radius.circular(3),

@@ -1,5 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../services/notifications/notification_service.dart';
 import '../../data/db/database.dart';
 import '../../services/chat/chat_service.dart';
 import '../../services/contacts/contact_service.dart';
@@ -82,6 +84,18 @@ class MessyCore {
     router.start();
     core.wipe.start();
     await connectivity.start();
+
+    // Message notifications: prompt for the permission (API 33+) and show a
+    // heads-up for messages that arrive while the app isn't in front.
+    final notifications = NotificationService();
+    await notifications.init();
+    router.onIncoming = (chatId, title, body) {
+      final state = WidgetsBinding.instance.lifecycleState;
+      if (state != AppLifecycleState.resumed) {
+        notifications.showMessage(chatId: chatId, title: title, body: body);
+      }
+    };
+
     // Keep the mesh alive when the app is backgrounded (user can toggle
     // off in Settings).
     await MeshForeground.start();
