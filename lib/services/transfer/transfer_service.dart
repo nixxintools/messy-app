@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import 'package:video_compress/video_compress.dart';
 
 import '../../core/bytes.dart';
 import '../../core/constants.dart';
@@ -29,11 +30,23 @@ class TransferService {
   final MediaStore mediaStore;
   final _uuid = const Uuid();
 
-  /// Sends a photo or video file to a 1:1 chat. Returns false if over the
-  /// mesh media cap (25 MB).
+  /// Sends a photo or video file to a 1:1 chat. Videos are transcoded to
+  /// 720p first — raw phone video is untenable over a mesh
+  /// (docs/ARCHITECTURE.md §11). Returns false only if the file is still
+  /// over the 25 MB cap after compression.
   Future<bool> sendMedia(String chatId, File file, String mimeType) async {
-    final bytes = await file.readAsBytes();
+    var sourceFile = file;
+    var effectiveMime = mimeType;
+    if (mimeType.startsWith('video/')) {
+      final compressed = await _compressVideo(file);
+      if (compressed != null) {
+        sourceFile = compressed;
+        effectiveMime = 'video/mp4';
+      }
+    }
+    final bytes = await sourceFile.readAsBytes();
     if (bytes.length > Protocol.relayedMediaCapBytes) return false;
+    final mime = effectiveMime;
 
     final contact = await (db.select(db.contacts)
           ..where((c) => c.nodeId.equals(chatId)))
@@ -54,14 +67,14 @@ class TransferService {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Keep our own copy in the media store so the bubble renders.
-    final localPath = await mediaStore.write(idHex, mimeType, bytes);
+    final localPath = await mediaStore.write(idHex, mime, bytes);
 
     await db.into(db.mediaItems).insert(
           MediaItemsCompanion(
             mediaId: Value(idHex),
             messageId: Value(idHex),
             filePath: Value(localPath),
-            mimeType: Value(mimeType),
+            mimeType: Value(mime),
             totalSize: Value(bytes.length),
             chunkTotal: Value(chunkTotal),
             sha256: Value(digest),
@@ -84,7 +97,7 @@ class TransferService {
 
     final manifest = utf8.encode(jsonEncode({
       'name': name,
-      'mime': mimeType,
+      'mime': mime,
       'size': bytes.length,
       'total': chunkTotal,
       'sha': b64u(digest),
@@ -115,5 +128,25 @@ class TransferService {
       );
     }
     return true;
+  }
+
+  /// Transcodes to 720p/H.264 mp4. Returns null if compression failed or
+  /// produced nothing smaller — the original is used as-is then.
+  Future<File?> _compressVideo(File file) async {
+    try {
+      final info = await VideoCompress.compressVideo(
+        file.path,
+        quality: VideoQuality.Res1280x720Quality,
+        deleteOrigin: false,
+        includeAudio: true,
+      );
+      final path = info?.file?.path;
+      if (path == null) return null;
+      final out = File(path);
+      if (await out.length() >= await file.length()) return null;
+      return out;
+    } on Object {
+      return null;
+    }
   }
 }

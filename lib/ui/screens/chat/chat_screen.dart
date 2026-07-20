@@ -53,12 +53,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final core = await ref.read(coreProvider.future);
     final mime = file.mimeType ??
         (video ? 'video/mp4' : 'image/jpeg');
+    if (video && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Compressing video to 720p…')),
+      );
+    }
     final ok = await core.transfer
         .sendMedia(widget.chatId, File(file.path), mime);
     if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Too large for the mesh — cap is 25 MB.'),
+          content: Text(
+            'Still over the 25 MB mesh cap after compression — '
+            'try a shorter clip.',
+          ),
         ),
       );
     }

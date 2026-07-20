@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../providers/providers.dart';
@@ -85,8 +86,41 @@ class _ScanTab extends ConsumerStatefulWidget {
   ConsumerState<_ScanTab> createState() => _ScanTabState();
 }
 
-class _ScanTabState extends ConsumerState<_ScanTab> {
+/// Production camera flow: explain → request → scan, with an
+/// open-settings path when the permission is permanently denied.
+class _ScanTabState extends ConsumerState<_ScanTab>
+    with WidgetsBindingObserver {
   bool _handled = false;
+  PermissionStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _check();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Coming back from system settings: re-check without re-prompting.
+    if (state == AppLifecycleState.resumed) _check();
+  }
+
+  Future<void> _check() async {
+    final status = await Permission.camera.status;
+    if (mounted) setState(() => _status = status);
+  }
+
+  Future<void> _request() async {
+    final status = await Permission.camera.request();
+    if (mounted) setState(() => _status = status);
+  }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (_handled) return;
@@ -104,7 +138,41 @@ class _ScanTabState extends ConsumerState<_ScanTab> {
 
   @override
   Widget build(BuildContext context) {
-    return MobileScanner(onDetect: _onDetect);
+    final status = _status;
+    if (status == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (status.isGranted) {
+      return MobileScanner(onDetect: _onDetect);
+    }
+    final permanentlyDenied = status.isPermanentlyDenied;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.qr_code_scanner, size: 56),
+            const SizedBox(height: 16),
+            const Text(
+              'Messy needs the camera to scan your friend\'s QR code. '
+              'Nothing is photographed or stored — the camera reads the '
+              'code and that\'s it.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: permanentlyDenied ? openAppSettings : _request,
+              child: Text(
+                permanentlyDenied
+                    ? 'Open settings to allow camera'
+                    : 'Allow camera',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

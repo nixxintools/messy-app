@@ -6,6 +6,7 @@ import '../../services/contacts/contact_service.dart';
 import '../../services/crypto/identity_service.dart';
 import '../../services/crypto/session_crypto.dart';
 import '../../services/security/pin_service.dart';
+import '../../services/mesh/mesh_foreground.dart';
 import '../../services/mesh/mesh_router.dart';
 import '../../services/transfer/media_store.dart';
 import '../../services/transfer/transfer_service.dart';
@@ -81,6 +82,9 @@ class MessyCore {
     router.start();
     core.wipe.start();
     await connectivity.start();
+    // Keep the mesh alive when the app is backgrounded (user can toggle
+    // off in Settings).
+    await MeshForeground.start();
     return core;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../services/mesh/mesh_foreground.dart';
 import '../../providers/providers.dart';
 import '../home_shell.dart';
 
@@ -15,15 +16,18 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool? _autoWipe;
   bool? _pinEnabled;
+  bool? _meshActive;
 
   Future<void> _load() async {
     final core = await ref.read(coreProvider.future);
     final wipe = await core.wipe.autoWipeEnabled();
     final pin = await ref.read(pinServiceProvider).isEnabled();
+    final mesh = await MeshForeground.isRunning;
     if (mounted) {
       setState(() {
         _autoWipe = wipe;
         _pinEnabled = pin;
+        _meshActive = mesh;
       });
     }
   }
@@ -103,6 +107,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.hub_outlined),
+                  title: const Text('Mesh active in background'),
+                  subtitle: const Text(
+                    'Keeps receiving and relaying with the screen off '
+                    '(shows a notification)',
+                  ),
+                  value: _meshActive ?? true,
+                  onChanged: (v) async {
+                    if (v) {
+                      await MeshForeground.start();
+                    } else {
+                      await MeshForeground.stop();
+                    }
+                    setState(() => _meshActive = v);
+                  },
+                ),
                 SwitchListTile(
                   secondary: const Icon(Icons.pin_outlined),
                   title: const Text('Require PIN'),
