@@ -50,7 +50,7 @@ The "Local" room is encrypted with a key derived from the room name (`HKDF("mess
 
 ## 7. Known limitations (v1) — deliberate, documented tradeoffs
 
-1. **No forward secrecy.** Static-static ECDH means a future compromise of a device's private key decrypts previously captured ciphertext for that pair. Ratcheting (Signal-style) needs round trips that store-and-forward delivery cannot guarantee. **v2 path:** X3DH-style signed prekeys gossiped over the mesh, then a Double Ratchet per session — the reference implementation to build against is [signalapp/libsignal](https://github.com/signalapp/libsignal) (the audited Rust core with FFI bindings that Signal itself ships; its sealed-sender and Kyber-hybrid work are also relevant to Messy's metadata and post-quantum roadmap). The 24 h auto-wipe and disappearing messages materially shrink this exposure window on-device.
+1. **No forward secrecy.** Static-static ECDH means a future compromise of a device's private key decrypts previously captured ciphertext for that pair. Ratcheting needs round trips that store-and-forward delivery cannot guarantee. **v2 path:** signed prekeys gossiped over the mesh, then a per-session ratchet. The 24 h auto-wipe and disappearing messages materially shrink this exposure window on-device.
 2. **Metadata visible to relays** (who↔who, when, how much). Mitigating this (onion routing, cover traffic) is out of scope for v1.
 3. **First-contact MITM for nearby adds** — mitigated by the fingerprint phrase and QR re-verification, not eliminated.
 4. **Deniability/anonymity are non-goals.** Messages are signed; participation on a mesh is observable by radio proximity.

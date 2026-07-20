@@ -60,7 +60,7 @@ Working v1 (Android):
 - ✅ Photo/video transfer with resume · videos auto-compressed to 720p
 - ✅ Disappearing messages + 24 h auto-wipe (on by default)
 - ✅ Background mesh: foreground service keeps receiving/relaying with the screen off
-- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, opportunistic internet P2P (WebRTC, serverless), forward secrecy — adopting the [Signal protocol via libsignal](https://github.com/signalapp/libsignal) (X3DH + Double Ratchet) is the reference direction
+- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, opportunistic internet P2P (WebRTC, serverless), forward secrecy
 
 ## Build & run
 
