@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Messy — Wireframes</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --ink:#e6edf3; --muted:#8b949e;
+    --accent:#ffd60a; --accent2:#58a6ff; --warn:#d29922;
+    --on-accent:#201a00;
+    --bubble-me:#4a3f0d; --bubble-them:#21262d; --line:#30363d;
+  }
+  *{box-sizing:border-box; margin:0}
+  body{background:var(--bg); color:var(--ink); font:14px/1.45 "Segoe UI",system-ui,sans-serif; padding:32px 24px 64px}
+  h1{font-size:26px; margin-bottom:4px}
+  .sub{color:var(--muted); margin-bottom:36px}
+  .grid{display:flex; flex-wrap:wrap; gap:36px; justify-content:flex-start}
+  .frame-wrap{width:300px}
+  .frame-wrap h2{font-size:15px; margin:0 0 4px; color:var(--accent)}
+  .frame-wrap p.note{color:var(--muted); font-size:12px; margin-bottom:10px; min-height:34px}
+  .phone{width:300px; height:620px; background:var(--panel); border:2px solid var(--line);
+         border-radius:28px; overflow:hidden; display:flex; flex-direction:column; position:relative}
+  .status{height:24px; display:flex; justify-content:space-between; align-items:center;
+          padding:0 16px; font-size:10px; color:var(--muted)}
+  .appbar{padding:10px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line)}
+  .appbar .title{font-weight:600; font-size:16px; flex:1}
+  .appbar .subtl{font-size:11px; color:var(--muted); font-weight:400}
+  .chip{font-size:10px; padding:2px 8px; border-radius:10px; background:#2b2508; color:var(--accent);
+        border:1px solid #5c4f12; white-space:nowrap}
+  .chip.blue{background:#0d2036; color:var(--accent2); border-color:#1c4471}
+  .chip.amber{background:#2b2110; color:var(--warn); border-color:#5c4a1a}
+  .chip.gray{background:#21262d; color:var(--muted); border-color:var(--line)}
+  .body{flex:1; overflow:hidden; display:flex; flex-direction:column}
+  .row{display:flex; gap:10px; padding:10px 14px; align-items:center; border-bottom:1px solid #1c2128}
+  .avatar{width:40px; height:40px; border-radius:50%; background:#2d333b; display:flex;
+          align-items:center; justify-content:center; font-weight:700; flex-shrink:0; font-size:15px}
+  .avatar.green{background:#453a0b; color:var(--accent)}
+  .row .meta{flex:1; min-width:0}
+  .row .name{font-weight:600; font-size:13.5px; display:flex; gap:6px; align-items:center}
+  .row .prev{color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .row .when{font-size:10px; color:var(--muted); text-align:right}
+  .badge{background:var(--accent); color:var(--on-accent); border-radius:9px; font-size:10px; font-weight:700;
+         padding:1px 6px; display:inline-block}
+  .fab{position:absolute; right:16px; bottom:66px; width:48px; height:48px; border-radius:16px;
+       background:var(--accent); color:var(--on-accent); display:flex; align-items:center; justify-content:center;
+       font-size:24px; font-weight:700; box-shadow:0 4px 14px rgba(0,0,0,.5)}
+  .navbar{height:52px; border-top:1px solid var(--line); display:flex}
+  .navbar div{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+              font-size:10px; color:var(--muted); gap:2px}
+  .navbar div.on{color:var(--accent)}
+  .navbar .ic{font-size:16px}
+  .banner{font-size:10.5px; padding:6px 12px; text-align:center}
+  .banner.pub{background:#2b2110; color:var(--warn)}
+  .banner.mesh{background:#0d2036; color:var(--accent2)}
+  .msgs{flex:1; padding:10px 12px; display:flex; flex-direction:column; gap:8px; overflow:hidden}
+  .bub{max-width:78%; padding:7px 10px; border-radius:12px; font-size:12.5px; position:relative}
+  .bub .st{display:block; font-size:9px; color:var(--muted); margin-top:3px; text-align:right}
+  .me{align-self:flex-end; background:var(--bubble-me); border-bottom-right-radius:3px}
+  .them{align-self:flex-start; background:var(--bubble-them); border-bottom-left-radius:3px}
+  .them .who{font-size:10px; color:var(--accent2); font-weight:600; margin-bottom:2px}
+  .sys{align-self:center; font-size:10px; color:var(--muted); background:#1c2128; padding:3px 10px; border-radius:10px}
+  .inputbar{display:flex; gap:8px; padding:8px 12px; border-top:1px solid var(--line); align-items:center}
+  .inputbar .field{flex:1; background:#0d1117; border:1px solid var(--line); border-radius:18px;
+                   padding:8px 12px; color:var(--muted); font-size:12px}
+  .inputbar .send{width:36px; height:36px; border-radius:50%; background:var(--accent); color:var(--on-accent);
+                  display:flex; align-items:center; justify-content:center; font-weight:700}
+  .media{width:170px}
+  .media .thumb{height:96px; background:linear-gradient(135deg,#2d333b,#1c2128); border-radius:8px;
+                display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:22px}
+  .prog{height:4px; background:#0d1117; border-radius:2px; margin-top:6px; overflow:hidden}
+  .prog i{display:block; height:100%; width:62%; background:var(--accent)}
+  .tabs{display:flex; border-bottom:1px solid var(--line)}
+  .tabs div{flex:1; text-align:center; padding:10px 0; font-size:12px; color:var(--muted)}
+  .tabs div.on{color:var(--accent); border-bottom:2px solid var(--accent); font-weight:600}
+  .qrbox{margin:22px auto 10px; width:170px; height:170px; background:#fff; border-radius:12px;
+         display:flex; align-items:center; justify-content:center}
+  .qr{width:140px; height:140px;
+      background:
+        repeating-linear-gradient(0deg,#000 0 8px,transparent 8px 16px),
+        repeating-linear-gradient(90deg,#000 0 8px,#fff 8px 16px)}
+  .center{text-align:center; padding:0 20px}
+  .center .big{font-size:16px; font-weight:600; margin-top:8px}
+  .center .mut{color:var(--muted); font-size:11.5px; margin-top:4px}
+  .btn{display:block; margin:14px auto 0; background:var(--accent); color:var(--on-accent); font-weight:700;
+       font-size:13px; padding:10px 0; width:78%; text-align:center; border-radius:22px}
+  .btn.ghost{background:transparent; color:var(--accent); border:1px solid var(--accent)}
+  .btn.small{width:44%; display:inline-block; margin:10px 4px 0; padding:8px 0; font-size:12px}
+  .btn.red{background:transparent; color:#f85149; border:1px solid #f85149}
+  .set{padding:11px 14px; border-bottom:1px solid #1c2128; display:flex; align-items:center; gap:10px}
+  .set .t{flex:1}
+  .set .t b{font-size:13px; font-weight:600; display:block}
+  .set .t span{font-size:11px; color:var(--muted)}
+  .toggle{width:38px; height:20px; border-radius:10px; background:#2d333b; position:relative; flex-shrink:0}
+  .toggle i{position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#8b949e}
+  .toggle.on{background:#453a0b}
+  .toggle.on i{left:auto; right:2px; background:var(--accent)}
+  .words{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:10px 18px}
+  .words span{background:#0d1117; border:1px solid var(--line); border-radius:8px; padding:4px 10px;
+              font-size:11.5px; font-family:Consolas,monospace; color:var(--accent2)}
+  .legend{margin-top:44px; border-top:1px solid var(--line); padding-top:20px; color:var(--muted); font-size:13px; max-width:860px}
+  .legend b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<h1>Messy — Wireframes</h1>
+<div class="sub">Mesh messenger · serverless P2P · E2E-encrypted · local-only SQLite · v1 screen set</div>
+
+<div class="grid">
+
+<!-- ============ 1. ONBOARDING ============ -->
+<div class="frame-wrap">
+  <h2>1 · Onboarding</h2>
+  <p class="note">First launch: pick a name, keys are generated on-device. No account, no phone number.</p>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="body" style="justify-content:center">
+      <div class="center">
+        <svg width="56" height="56" viewBox="0 0 100 100" fill="none" stroke="var(--accent)" stroke-width="3" style="display:block; margin:0 auto">
+          <circle cx="50" cy="50" r="14"/>
+          <circle cx="50" cy="50" r="30"/>
+          <circle cx="50" cy="50" r="46"/>
+          <line x1="50" y1="4" x2="50" y2="96"/>
+          <line x1="4" y1="50" x2="96" y2="50"/>
+          <line x1="17" y1="17" x2="83" y2="83"/>
+          <line x1="83" y1="17" x2="17" y2="83"/>
+          <circle cx="50" cy="50" r="4" fill="var(--accent)" stroke="none"/>
+        </svg>
+        <div class="big">Welcome to Messy</div>
+        <div class="mut">Messaging that works without the internet.<br>No account. No servers. No sign-up.</div>
+        <div style="margin-top:26px; text-align:left">
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px">DISPLAY NAME</div>
+          <div class="field" style="background:#0d1117; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:13px">maya</div>
+        </div>
+        <div class="mut" style="margin-top:14px">🔐 Your encryption identity is created and stored<br>only on this device (Android Keystore).</div>
+        <div class="btn">Create my identity</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2. CHAT LIST ============ -->
+<div class="frame-wrap">
+  <h2>2 · Chat list (home)</h2>
+  <p class="note">Public "Local" room pinned on top. Mesh-status chip shows the current transport truthfully.</p>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="appbar">
+      <div class="title">Messy</div>
+      <span class="chip">⛓ Mesh · 3 peers</span>
+    </div>
+    <div class="body">
+      <div class="row" style="background:#1a1810">
+        <div class="avatar green">📡</div>
+        <div class="meta">
+          <div class="name">Local <span class="chip amber">public</span></div>
+          <div class="prev">rex: anyone near the north gate?</div>
+        </div>
+        <div class="when">2m<br><span class="badge">4</span></div>
+      </div>
+      <div class="row">
+        <div class="avatar">A</div>
+        <div class="meta">
+          <div class="name">Aki <span class="chip">✓ verified</span></div>
+          <div class="prev">📷 Photo · delivered</div>
+        </div>
+        <div class="when">09:12</div>
+      </div>
+      <div class="row">
+        <div class="avatar">J</div>
+        <div class="meta">
+          <div class="name">Jordan <span class="chip gray">⏱ 24h</span></div>
+          <div class="prev">you: on my way ✓✓</div>
+        </div>
+        <div class="when">08:56</div>
+      </div>
+      <div class="row">
+        <div class="avatar">S</div>
+        <div class="meta">
+          <div class="name">Sam</div>
+          <div class="prev">you: video (14 MB) · carrying…</div>
+        </div>
+        <div class="when">Yest</div>
+      </div>
+      <div class="fab">＋</div>
+    </div>
+    <div class="navbar">
+      <div class="on"><span class="ic">💬</span>Chats</div>
+      <div><span class="ic">👥</span>Contacts</div>
+      <div><span class="ic">⚙️</span>Settings</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. PUBLIC ROOM ============ -->
+<div class="frame-wrap">
+  <h2>3 · Public room "Local"</h2>
+  <p class="note">Broadcast feed anyone nearby can read/post. Clear banner: not private, expires in 24 h.</p>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="appbar">
+      <div>‹</div>
+      <div class="title">Local <div class="subtl">public room · 7 people heard recently</div></div>
+    </div>
+    <div class="banner pub">⚠ Readable by anyone nearby · messages vanish after 24 h</div>
+    <div class="body">
+      <div class="msgs">
+        <div class="sys">Joined mesh via Wi-Fi Direct</div>
+        <div class="bub them"><div class="who">rex · a3f9</div>anyone near the north gate?<span class="st">09:39</span></div>
+        <div class="bub them"><div class="who">kip · 77c2</div>water station moved to hall B<span class="st">09:40</span></div>
+        <div class="bub me">gate's clear, heading there now<span class="st">09:41 · sent to mesh ⛓</span></div>
+      </div>
+      <div class="inputbar">
+        <div class="field">Message everyone nearby…</div>
+        <div class="send">➤</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 4. 1:1 CHAT ============ -->
+<div class="frame-wrap">
+  <h2>4 · 1:1 chat</h2>
+  <p class="note">Honest delivery states (queued → sent to mesh → delivered), media with progress, disappearing-timer chip.</p>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="appbar">
+      <div>‹</div>
+      <div class="avatar" style="width:32px; height:32px; font-size:13px">A</div>
+      <div class="title">Aki <div class="subtl">nearby · Wi-Fi Direct</div></div>
+      <span class="chip gray">⏱ 24h</span>
+    </div>
+    <div class="banner mesh">🔒 End-to-end encrypted · verified via QR</div>
+    <div class="body">
+      <div class="msgs">
+        <div class="sys">Disappearing messages: 24 hours</div>
+        <div class="bub them">made it to the campsite!<span class="st">09:02</span></div>
+        <div class="bub me">sending you the trail map<span class="st">09:04 · ✓✓ delivered</span></div>
+        <div class="bub me media">
+          <div class="thumb">🎬</div>
+          <div class="prog"><i></i></div>
+          <span class="st">video · 14 MB · 62% · via mesh ⛓</span>
+        </div>
+        <div class="bub me">no signal here, this will hop over<span class="st">09:41 · ⛓ sent to mesh</span></div>
+      </div>
+      <div class="inputbar">
+        <div>📎</div><div>📷</div>
+        <div class="field">Message…</div>
+        <div class="send">➤</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 5. ADD CONTACT ============ -->
+<div class="frame-wrap">
+  <h2>5 · Add contact</h2>
+  <p class="note">Three tabs: show my QR, scan theirs (→ verified), or pick from nearby devices (→ request/accept).</p>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="appbar"><div>‹</div><div class="title">Add contact</div></div>
+    <div class="tabs"><div class="on">My QR</div><div>Scan</div><div>Nearby</div></div>
+    <div class="body">
+      <div class="qrbox"><div class="qr"></div></div>
+      <div class="center">
+        <div class="big">maya</div>
+        <div class="mut">node a91f·30c2 · contains your public keys</div>
+        <div class="mut" style="margin-top:10px">Scanning each other in person marks the<br>contact <b style="color:var(--accent)">✓ verified</b> — the strongest trust level.</div>
+      </div>
+      <div style="border-top:1px solid var(--line); margin-top:18px">
+        <div class="row">
+          <div class="avatar">R</div>
+          <div class="meta"><div class="name">rex</div><div class="prev">nearby · Wi-Fi Direct</div></div>
+          <span class="chip blue">Request</span>
+        </div>
+        <div class="row">
+          <div class="avatar">K</div>
+          <div class="meta"><div class="name">kip</div><div class="prev">wants to connect</div></div>
+          <span class="chip">Accept</span>&nbsp;<span class="chip gray">✕</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 6. CONTACT DETAIL ============ -->
+<div class="frame-wrap">
+  <h2>6 · Contact detail</h2>
+  <p class="note">Trust status, 6-word fingerprint for out-of-band verification, per-chat disappearing timer.</p>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="appbar"><div>‹</div><div class="title">Contact</div></div>
+    <div class="body">
+      <div class="center" style="padding-top:18px">
+        <div class="avatar" style="width:64px; height:64px; margin:0 auto; font-size:24px">J</div>
+        <div class="big">Jordan</div>
+        <div class="mut">node 77c2·b510 · added nearby</div>
+        <div style="margin-top:8px"><span class="chip amber">unverified — compare the phrase below</span></div>
+      </div>
+      <div class="words">
+        <span>ember</span><span>violet</span><span>canyon</span>
+        <span>drift</span><span>maple</span><span>nine</span>
+      </div>
+      <div class="center"><div class="mut">Both phones show the same 6 words if no one<br>is in the middle. Or verify by scanning QR:</div>
+        <div class="btn ghost small">Verify via QR</div>
+      </div>
+      <div style="margin-top:14px; border-top:1px solid var(--line)">
+        <div class="set">
+          <div class="t"><b>Disappearing messages</b><span>off · 1 h · <b style="color:var(--accent)">24 h</b> · 7 d</span></div>
+        </div>
+        <div class="set">
+          <div class="t"><b>Clear chat now</b><span>deletes this conversation on this device</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 7. SETTINGS ============ -->
+<div class="frame-wrap">
+  <h2>7 · Settings</h2>
+  <p class="note">Mesh service toggle (foreground service), 24 h auto-wipe, relay opt-in with storage budget.</p>
+  <div class="phone">
+    <div class="status"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="appbar"><div class="title">Settings</div></div>
+    <div class="body">
+      <div class="set">
+        <div class="t"><b>Mesh active</b><span>keeps discovery + relaying running (shows a notification)</span></div>
+        <div class="toggle on"><i></i></div>
+      </div>
+      <div class="set">
+        <div class="t"><b>Auto-wipe every 24 h</b><span>erases all messages &amp; media daily; contacts survive</span></div>
+        <div class="toggle on"><i></i></div>
+      </div>
+      <div class="set">
+        <div class="t"><b>Relay for others</b><span>carry encrypted messages you can't read</span></div>
+        <div class="toggle on"><i></i></div>
+      </div>
+      <div class="set">
+        <div class="t"><b>Relay storage budget</b><span>256 MB · media evicted first</span></div>
+      </div>
+      <div class="set">
+        <div class="t"><b>Block screenshots</b><span>FLAG_SECURE on chat screens</span></div>
+        <div class="toggle"><i></i></div>
+      </div>
+      <div class="set">
+        <div class="t"><b>Identity</b><span>maya · node a91f·30c2 · created 2026-07-20</span></div>
+      </div>
+      <div class="center">
+        <div class="btn red small">Wipe everything now</div>
+      </div>
+    </div>
+    <div class="navbar">
+      <div><span class="ic">💬</span>Chats</div>
+      <div><span class="ic">👥</span>Contacts</div>
+      <div class="on"><span class="ic">⚙️</span>Settings</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="legend">
+  <b>Delivery-state language (used everywhere):</b> <i>queued</i> (no link yet) → <i>⛓ sent to mesh</i> (handed to ≥1 peer, may be carried physically) → <i>✓✓ delivered</i> (recipient's device confirmed via gossiped receipt). The transport chip in the app bar shows the live path: <b>LAN</b> (same Wi-Fi), <b>Wi-Fi Direct</b> (hotspot/group), <b>Internet</b> (direct P2P), or <b>Carrying</b> (offline, storing for later hops). The UI never claims delivery it can't prove — that honesty is a core design rule from ARCHITECTURE.md.
+</div>
+
+</body>
+</html>

@@ -1,0 +1,91 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/providers.dart';
+import 'add_contact/add_contact_screen.dart';
+import 'chat_list/chat_list_screen.dart';
+import 'contacts/contacts_screen.dart';
+import 'settings/settings_screen.dart';
+
+class HomeShell extends ConsumerStatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  ConsumerState<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends ConsumerState<HomeShell> {
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final core = ref.watch(coreProvider);
+    return core.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) =>
+          Scaffold(body: Center(child: Text('Failed to start mesh: $e'))),
+      data: (_) => Scaffold(
+        body: switch (_tab) {
+          0 => const ChatListScreen(),
+          1 => const ContactsScreen(),
+          _ => const SettingsScreen(),
+        },
+        floatingActionButton: _tab == 2
+            ? null
+            : FloatingActionButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AddContactScreen(),
+                  ),
+                ),
+                child: const Icon(Icons.person_add),
+              ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _tab,
+          onDestinationSelected: (i) => setState(() => _tab = i),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat_bubble),
+              label: 'Chats',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people),
+              label: 'Contacts',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mesh-status chip shown in app bars — tells the truth about connectivity.
+class MeshStatusChip extends ConsumerWidget {
+  const MeshStatusChip({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final peers = ref.watch(peerCountProvider).valueOrNull ?? 0;
+    final scheme = Theme.of(context).colorScheme;
+    return Chip(
+      visualDensity: VisualDensity.compact,
+      avatar: Icon(
+        peers > 0 ? Icons.hub : Icons.wifi_off,
+        size: 16,
+        color: peers > 0 ? scheme.primary : scheme.outline,
+      ),
+      label: Text(
+        peers > 0 ? 'Mesh · $peers peer${peers == 1 ? '' : 's'}' : 'Alone',
+        style: Theme.of(context).textTheme.labelSmall,
+      ),
+    );
+  }
+}
