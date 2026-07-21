@@ -1,4 +1,4 @@
-### 📦 [**Download the APK — latest release**](https://github.com/nixxintools/messy-app/releases/latest) · Android 10+, sideload directly, no Play Store needed
+### 📦 [**Download the APK — latest release**](https://github.com/nixxintools/messy-app/releases/download/v2.5.0/messy-v25.apk) · Android 10+, sideload directly, no Play Store needed · [Previous releases](https://github.com/nixxintools/messy-app/releases/latest)
 
 ---
 
