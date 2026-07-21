@@ -91,16 +91,34 @@ class MeshStatusChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final peers = ref.watch(peerCountProvider).valueOrNull ?? 0;
     final scheme = Theme.of(context).colorScheme;
-    return Chip(
-      visualDensity: VisualDensity.compact,
-      avatar: Icon(
-        peers > 0 ? Icons.hub : Icons.wifi_off,
-        size: 16,
-        color: peers > 0 ? scheme.primary : scheme.outline,
-      ),
-      label: Text(
-        peers > 0 ? 'Mesh · $peers peer${peers == 1 ? '' : 's'}' : 'Alone',
-        style: Theme.of(context).textTheme.labelSmall,
+    // Compact so it fits alongside the app-bar actions; the full wording
+    // lives in the tooltip.
+    return Tooltip(
+      message: peers > 0
+          ? 'Mesh active · $peers peer${peers == 1 ? '' : 's'} connected'
+          : 'No peers nearby yet',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              peers > 0 ? Icons.hub : Icons.wifi_off,
+              size: 18,
+              color: peers > 0 ? scheme.primary : scheme.outline,
+            ),
+            if (peers > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '$peers',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(color: scheme.primary),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

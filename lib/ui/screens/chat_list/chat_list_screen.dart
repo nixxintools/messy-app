@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/db/database.dart';
 import '../../../services/mesh/mesh_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../core/well_known.dart';
 import '../../providers/providers.dart';
+import '../../widgets/messy_title.dart';
 import '../chat/chat_screen.dart';
-import '../group/create_group_screen.dart';
 import '../home_shell.dart';
+import '../share/share_app_screen.dart';
 
 /// Home: pinned "Local" public room + 1:1 chats — wireframe screen 2.
 class ChatListScreen extends ConsumerWidget {
@@ -49,17 +52,23 @@ class ChatListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messy'),
+        titleSpacing: 16,
+        title: const MessyTitle('Messy'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.group_add),
-            tooltip: 'New group',
+            icon: const Icon(Icons.system_update_alt),
+            tooltip: 'Get the latest version',
+            onPressed: () => _openReleases(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.ios_share),
+            tooltip: 'Share Messy with people nearby',
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CreateGroupScreen()),
+              MaterialPageRoute(builder: (_) => const ShareAppScreen()),
             ),
           ),
           const Padding(
-            padding: EdgeInsets.only(right: 12),
+            padding: EdgeInsets.only(right: 8),
             child: MeshStatusChip(),
           ),
         ],
@@ -123,6 +132,16 @@ class ChatListScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  static Future<void> _openReleases(BuildContext context) async {
+    final uri = Uri.parse('https://github.com/nixxintools/messy-app/releases/');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the releases page.')),
+      );
+    }
   }
 
   static String _preview(MessageRow m) {

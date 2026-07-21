@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/well_known.dart';
 import '../../../data/db/database.dart';
 import '../../providers/providers.dart';
+import '../../widgets/messy_title.dart';
 import '../chat/chat_screen.dart';
 import '../home_shell.dart';
 import 'create_group_screen.dart';
@@ -19,9 +20,10 @@ class GroupsScreen extends ConsumerWidget {
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Groups'),
+        titleSpacing: 16,
+        title: const MessyTitle('Groups'),
         actions: const [
-          Padding(padding: EdgeInsets.only(right: 12), child: MeshStatusChip()),
+          Padding(padding: EdgeInsets.only(right: 8), child: MeshStatusChip()),
         ],
       ),
       body: groups.isEmpty

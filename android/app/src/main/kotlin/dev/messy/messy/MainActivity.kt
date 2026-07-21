@@ -115,6 +115,18 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // Location of our own installed APK, so the app can share/serve
+        // itself to nearby people (no app store needed).
+        MethodChannel(messenger, "messy/app").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "apkPath" -> result.success(applicationInfo.sourceDir)
+                "versionName" -> result.success(
+                    packageManager.getPackageInfo(packageName, 0).versionName,
+                )
+                else -> result.notImplemented()
+            }
+        }
+
         // FLAG_SECURE: block screenshots and hide the app from the recents
         // thumbnail when enabled.
         MethodChannel(messenger, "messy/window").setMethodCallHandler { call, result ->
