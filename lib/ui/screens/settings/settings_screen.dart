@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../services/mesh/mesh_foreground.dart';
+import '../../../services/security/pin_service.dart';
+import '../../../services/security/secure_screen_service.dart';
 import '../../providers/providers.dart';
 import '../home_shell.dart';
 import 'blocked_screen.dart';
@@ -18,17 +20,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool? _autoWipe;
   bool? _pinEnabled;
   bool? _meshActive;
+  bool? _flagSecure;
+  final _secureScreen = SecureScreenService();
 
   Future<void> _load() async {
     final core = await ref.read(coreProvider.future);
     final wipe = await core.wipe.autoWipeEnabled();
     final pin = await ref.read(pinServiceProvider).isEnabled();
     final mesh = await MeshForeground.isRunning;
+    final secure = await _secureScreen.isEnabled();
     if (mounted) {
       setState(() {
         _autoWipe = wipe;
         _pinEnabled = pin;
         _meshActive = mesh;
+        _flagSecure = secure;
       });
     }
   }
@@ -54,7 +60,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     // Reducing security requires proving you hold the current PIN.
     final entered = await _promptForPin();
     if (entered == null) return;
-    final ok = await pinService.verifyPin(entered);
+    final ok = await pinService.verify(entered) is PinOk;
     if (!ok) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,6 +152,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onChanged: (v) async {
                     await core.wipe.setAutoWipe(v);
                     setState(() => _autoWipe = v);
+                  },
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.screenshot_monitor_outlined),
+                  title: const Text('Block screenshots'),
+                  subtitle: const Text(
+                    'Prevents screenshots/recording and hides the app in '
+                    'recents (FLAG_SECURE)',
+                  ),
+                  value: _flagSecure ?? false,
+                  onChanged: (v) async {
+                    await _secureScreen.setEnabled(v);
+                    setState(() => _flagSecure = v);
                   },
                 ),
                 ListTile(

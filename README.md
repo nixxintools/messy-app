@@ -35,7 +35,9 @@ Messy starts locked down and lets *you* decide to loosen it — never the other 
 - **Local-only storage.** One SQLite database on your phone (with `secure_delete` on), no cloud, no backups, no telemetry. Nothing ever leaves your device except encrypted envelopes to peers.
 - **Verified contacts.** Scan each other's QR codes in person and the app marks the contact verified — the keys came from a phone you could see. Contacts added over the air get a 6-word fingerprint phrase both of you can compare aloud.
 
-The honest fine print lives in [docs/SECURITY.md](docs/SECURITY.md) — including what Messy does *not* protect (no post-compromise security yet, relays can see who talks to whom, the public rooms are readable by anyone running the app).
+- **Hardened at rest.** The database is **encrypted with SQLCipher** (key held in the Android Keystore) — OTK secrets and routing metadata are never plaintext on disk; the app refuses to run if encryption isn't active. The PIN is **Argon2id**-hashed with rate-limited lockout. Optional `FLAG_SECURE` blocks screenshots.
+
+> ⚠️ **Not audited.** Messy was built fast and has had **no professional security review**. It's promising but unproven — don't rely on it where a compromise could put someone at risk; use a mature audited tool (e.g. Signal) for high-stakes needs. The honest fine print, including what Messy does *not* protect (no post-compromise security, relays see who-talks-to-whom, public rooms are readable by anyone running the app, radios unverified on hardware), is in [docs/SECURITY.md](docs/SECURITY.md).
 
 ## How it works
 

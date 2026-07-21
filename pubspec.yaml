@@ -2,7 +2,7 @@ name: messy
 description: "Messy — serverless mesh messenger. E2E-encrypted messaging, photos, and video over Wi-Fi LAN, Wi-Fi Direct hotspots, and opportunistic internet P2P."
 publish_to: 'none'
 
-version: 2.5.0+1
+version: 2.6.0+1
 
 environment:
   sdk: ^3.12.2
@@ -15,10 +15,12 @@ dependencies:
   # State / DI
   flutter_riverpod: ^2.6.1
 
-  # Local-only storage (SQLite)
+  # Local-only storage — SQLCipher (encrypted at rest)
   drift: ^2.28.0
-  drift_flutter: ^0.2.4
+  sqlite3: ^2.4.0
+  sqlcipher_flutter_libs: ^0.6.0
   path_provider: ^2.1.5
+  path: ^1.9.0
 
   # Crypto: X25519 / Ed25519 / HKDF / AES-256-GCM
   cryptography: ^2.7.0
@@ -65,6 +67,9 @@ dev_dependencies:
   freezed: ^3.2.0
   flutter_launcher_icons: ^0.14.4
   image: ^4.3.0
+  # Host-side sqlite for `flutter test` only (in-memory DBs). Dev-only, so it
+  # is NOT in the release APK and can't clash with SQLCipher's native lib.
+  sqlite3_flutter_libs: ^0.5.42
 
 flutter_launcher_icons:
   android: true

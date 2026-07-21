@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../services/security/pin_service.dart';
 import '../../providers/providers.dart';
 import '../../widgets/web_logo.dart';
 
@@ -117,15 +118,22 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
       _checking = true;
       _error = null;
     });
-    final ok = await ref.read(pinServiceProvider).verifyPin(_pin.text);
-    if (ok) {
+    final result = await ref.read(pinServiceProvider).verify(_pin.text);
+    if (result is PinOk) {
       ref.invalidate(appGateProvider);
       return;
     }
     _pin.clear();
     setState(() {
       _checking = false;
-      _error = 'Wrong PIN';
+      _error = switch (result) {
+        PinLockedOut(:final retryInSeconds) =>
+          'Too many attempts — wait ${retryInSeconds}s',
+        PinWrong(:final attemptsLeftBeforeLockout)
+            when attemptsLeftBeforeLockout > 0 =>
+          'Wrong PIN · $attemptsLeftBeforeLockout left before lockout',
+        _ => 'Wrong PIN',
+      };
     });
   }
 

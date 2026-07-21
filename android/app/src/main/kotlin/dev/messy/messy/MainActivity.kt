@@ -6,6 +6,7 @@ import android.net.wifi.WifiManager
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -110,6 +111,25 @@ class MainActivity : FlutterActivity() {
                     result.success(d?.send(connId, data) ?: false)
                 }
                 "stop" -> { d?.stop(); result.success(null) }
+                else -> result.notImplemented()
+            }
+        }
+
+        // FLAG_SECURE: block screenshots and hide the app from the recents
+        // thumbnail when enabled.
+        MethodChannel(messenger, "messy/window").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setSecure" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    runOnUiThread {
+                        if (enabled) {
+                            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        } else {
+                            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                        }
+                    }
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }

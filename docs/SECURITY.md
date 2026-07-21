@@ -1,6 +1,8 @@
 # Messy — Security Design & Threat Model
 
-This document states plainly what Messy protects, how, and — just as importantly — what it does **not** protect in v1.
+> ⚠️ **Not independently audited.** Messy is an in-development project built quickly. It has **not** had a professional security review, and it should not be relied on where a compromise could endanger someone. The design below is implemented in good faith and the honest limitations are listed, but "we tried to do it right" is not the same as "audited." If you need censorship-resistant messaging for a high-stakes threat model today, use a mature, audited tool (e.g. Signal). Treat Messy as promising, unproven software.
+
+This document states plainly what Messy protects, how, and — just as importantly — what it does **not** protect.
 
 ## 1. Identity & keys
 
@@ -68,12 +70,15 @@ This is the ceiling of what a serverless design allows: abuse becomes low-reach,
 - A PIN is set up **mandatorily during onboarding** and the gate is **on by default** — Messy starts at maximum security and only the user can reduce it.
 - The PIN is required to open the app at least once every 24 h; a successful unlock is valid for 24 h across restarts.
 - Disabling the gate in Settings requires entering the current PIN.
-- Storage: salted SHA-256 of the PIN in the Keystore-backed secure store. The gate protects the UI; data-at-rest protection comes from Android file-based encryption + the measures below. (Deriving a DB encryption key from the PIN, e.g. SQLCipher, is the v2 upgrade path.)
+- **Hashing: Argon2id** (memory-hard KDF: 19 MiB, 2 passes) over the PIN + a random 16-byte salt, stored in the Keystore-backed secure store. Comparison is constant-time.
+- **Rate limiting:** after a few free attempts, wrong PINs trigger escalating lockouts (5s → 15s → 60s → 5m → 15m → 1h). While locked, even the correct PIN is refused until the window passes. Attempt/lockout state lives in secure storage, so it survives an app-data or database wipe. This is the primary defense given a numeric PIN's small keyspace.
 
 ## 6. Data at rest
 
-- Single local **SQLite** database (via drift). No cloud storage, no sync, no server. `android:allowBackup="false"` keeps chats out of Google/device backups.
-- `PRAGMA secure_delete = ON` — deleted rows are overwritten in the database file, not merely unlinked.
+- **The database is encrypted with SQLCipher** (AES-256). The encryption key is a random 256-bit value generated on first launch and held in `flutter_secure_storage` (Android Keystore, hardware-backed on most devices). A copied database file is unreadable without the Keystore key — so OTK private keys, relay-store ciphertext, and routing metadata are **not** on disk in plaintext.
+- `PRAGMA secure_delete = ON` — freed pages are overwritten, not merely unlinked.
+- No cloud storage, no sync, no server. `android:allowBackup="false"` keeps chats out of Google/device backups.
+- **Screenshot/recents protection:** an optional Settings toggle applies Android `FLAG_SECURE`, blocking screenshots and screen recording and hiding the app's content in the recent-apps switcher. (Off by default; the toggle is now actually wired to the window flag.)
 - **Disappearing messages:** per-chat timer (off / 1 h / 24 h / 7 d) carried *inside the encrypted payload* so both ends enforce it. Cooperative, not cryptographic: a malicious recipient can screenshot or fork the app. This is the same honesty caveat Signal/WhatsApp carry.
 - **24 h auto-wipe (opt-in):** wipes messages, media files, the relay store, and the seen-envelope set every 24 h; identity and contacts survive. Enforced by a periodic job plus a sweep-on-launch guarantee (nothing older than 24 h is ever displayed even if the background job was deferred by the OS).
 - Relayed foreign envelopes are ciphertext and are evicted at 72 h (24 h for public posts) or under storage pressure.
@@ -88,8 +93,18 @@ This is the ceiling of what a serverless design allows: abuse becomes low-reach,
 
 ## 8. Platform hardening checklist
 
-- `allowBackup="false"`, `dataExtractionRules` opt-out (API 31+)
-- Keystore-backed seed, no key material in SharedPreferences or logs
-- `FLAG_SECURE` on chat screens (blocks screenshots/recents thumbnail) — Settings toggle
+- `allowBackup="false"` keeps app data out of backups
+- SQLCipher-encrypted database; Keystore-backed identity seed and DB key; no key material in SharedPreferences or logs
+- Argon2id-hashed PIN with rate-limited lockout
+- `FLAG_SECURE` (blocks screenshots/recents thumbnail) — Settings toggle, implemented via the window flag
 - No third-party analytics/telemetry of any kind
 - Dependency pinning + `flutter pub outdated` review each release
+
+## 9. Still weak / not done (be honest)
+
+- **Not audited** (see the banner at the top). No external cryptographic or code review.
+- **PIN keyspace is small.** A numeric PIN has ~10^6 combinations; Argon2id + lockout slow an attacker but a determined adversary with the unlocked device and time is not stopped by a PIN alone.
+- **DB key is not PIN-derived.** The SQLCipher key lives in the Keystore, protecting against a *copied database file*. It does not require the PIN to unlock the data, so an attacker who can run code as the app on an unlocked, non-rooted device could still reach the key via the Keystore. PIN-derived DB keys are a future hardening.
+- **Metadata still visible to relays** (who↔who, when, sizes) — see §2. No onion routing / cover traffic.
+- **No post-compromise security** (no Double Ratchet) — see §7.
+- **The radio transports (BLE, Wi-Fi Aware, Wi-Fi Direct) are unverified on hardware** and have not been security-reviewed for their own attack surface.

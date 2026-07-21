@@ -17,7 +17,18 @@ class RadioService {
 
   Future<bool> isBluetoothOn() async {
     try {
-      return _bt.state == BluetoothLowEnergyState.poweredOn;
+      var st = _bt.state;
+      // On a cold start the plugin may report unknown/unauthorized until it's
+      // authorized — grant + re-read so a phone with BT already on isn't
+      // wrongly shown as "off".
+      if (st == BluetoothLowEnergyState.unknown ||
+          st == BluetoothLowEnergyState.unauthorized) {
+        await _bt.authorize();
+        // Give the platform a moment to publish the resolved state.
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        st = _bt.state;
+      }
+      return st == BluetoothLowEnergyState.poweredOn;
     } on Object {
       return false;
     }

@@ -1,12 +1,20 @@
-﻿import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+﻿import 'dart:io';
+
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../../core/well_known.dart';
+import 'db_key.dart';
 
 part 'database.g.dart';
 
-/// Local-only SQLite -- docs/ARCHITECTURE.md section 8. No cloud, no sync.
-/// secure_delete is enabled so wiped rows are overwritten, not unlinked.
+/// Local-only storage, **encrypted at rest with SQLCipher** — the whole
+/// database file is AES-encrypted with a Keystore-held key (see [DbKey]), so
+/// OTK secrets and routing metadata are never on disk in plaintext.
+/// secure_delete is on so freed pages are overwritten too.
 
 @DataClassName('ContactRow')
 class Contacts extends Table {
@@ -251,7 +259,50 @@ class MessyDatabase extends _$MessyDatabase {
         },
       );
 
-  static QueryExecutor _open() => driftDatabase(name: 'messy');
+  static QueryExecutor _open() {
+    return LazyDatabase(() async {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File(p.join(dir.path, 'messy.db'));
+      final keyHex = await DbKey.getOrCreateHex();
+      // Raw 256-bit key (no KDF): SQLCipher takes it directly as x'<hex>'.
+      final keyPragma = "PRAGMA key = \"x'$keyHex'\";";
+
+      // If a legacy plaintext / wrong-key DB exists, it won't open with our
+      // key — delete it and start fresh encrypted (acceptable pre-1.0; the
+      // app auto-wipes daily anyway).
+      if (await file.exists()) {
+        try {
+          final probe = sqlite3.open(file.path);
+          probe.execute(keyPragma);
+          probe.select('SELECT count(*) FROM sqlite_master;');
+          probe.dispose();
+        } on Object {
+          await file.delete();
+        }
+      }
+
+      return NativeDatabase(
+        file,
+        setup: (raw) {
+          raw.execute(keyPragma);
+          raw.execute('PRAGMA secure_delete = ON;');
+          // Fail LOUDLY if SQLCipher isn't actually active — otherwise stock
+          // SQLite would silently ignore PRAGMA key and run on a *plaintext*
+          // database, i.e. false security. cipher_version is empty on stock
+          // sqlite and a version string on SQLCipher.
+          final v = raw.select('PRAGMA cipher_version;');
+          final active = v.isNotEmpty &&
+              (v.first.values.first?.toString().isNotEmpty ?? false);
+          if (!active) {
+            throw StateError(
+              'SQLCipher is not active — refusing to run on an unencrypted '
+              'database.',
+            );
+          }
+        },
+      );
+    });
+  }
 
   Future<String?> getSetting(String key) async {
     final row = await (select(settings)..where((s) => s.key.equals(key)))
