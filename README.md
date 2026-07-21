@@ -84,7 +84,10 @@ Working (Android), v2:
 - ✅ Authenticated public/group posts (Ed25519) — no impersonating a contact in Local
 - ✅ Moderation: block/mute a sender (hides, purges, stops relaying them), per-sender relay rate limiting, and web-of-trust blocklists shared among verified contacts
 - ✅ No auto-download in the public Media channel — tap-to-view placeholder for unverified media; delete any received media
-- ✅ Bluetooth LE mesh transport — true infrastructure-free multi-hop: each phone is simultaneously a BLE peripheral and central, so messages hop phone-to-phone across separate hotspots/networks with no shared AP. Runs alongside Wi-Fi (cheapest transport wins). *Note: needs on-device field testing to confirm across handsets — see [ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+- ✅ **Hybrid infrastructure-free mesh** — messages hop phone-to-phone across separate hotspots/networks with no shared AP, via two complementary radios (the FireChat/Open Garden approach):
+  - **Bluetooth LE** — universal, low-power: each phone is at once a BLE peripheral and central, forming chains by proximity. The everywhere-baseline.
+  - **Wi-Fi Aware (NAN)** — high-throughput native transport (adapted from [NodleCode's reference](https://github.com/NodleCode/wifi-aware)): peers form a data-path socket with no AP; carries media fast where hardware supports it.
+  - Both run alongside Wi-Fi/hotspot behind one transport abstraction; the router auto-picks the best available per peer. *Note: BLE and Wi-Fi Aware need on-device field testing across handsets to confirm — see [ARCHITECTURE.md](docs/ARCHITECTURE.md).*
 - ⏳ Roadmap: programmatic Wi-Fi Direct group formation, opportunistic internet P2P (WebRTC, serverless), post-compromise security (ratcheting), FS for media via per-transfer keys
 
 ## Build & run

@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 
-/// Which pipe a [Link] runs over. Cost order: lan < wifiDirect < bluetooth.
-/// Bluetooth is slowest but needs no shared network — it forms the true
-/// infrastructure-free multi-hop mesh across hotspots.
-enum LinkTransport { lan, wifiDirect, internet, bluetooth }
+/// Which pipe a [Link] runs over. Cost order:
+/// lan < wifiAware < wifiDirect < internet < bluetooth.
+/// Wi-Fi Aware and Bluetooth both need no shared network — they form the true
+/// infrastructure-free multi-hop mesh across hotspots. Wi-Fi Aware is high
+/// throughput (media); Bluetooth is low-power and near-universal (fallback).
+enum LinkTransport { lan, wifiAware, wifiDirect, internet, bluetooth }
 
 enum LinkState { connecting, up, down }
 

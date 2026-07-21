@@ -89,7 +89,13 @@ Wi-Fi's hard limit is that a radio joins one network at a time, so two separate 
 
 Frames are fragmented to the negotiated MTU on send and reassembled by the same `FrameReader` the TCP path uses, so the mesh layer above is unchanged — BLE links are handed to `ConnectivityManager.ingestLink` exactly like TCP links, go through the identical signed-hello handshake, and carry the identical encrypted envelopes. A per-pair tie-break (the lower nodeId dials) prevents double connections. The whole BLE subsystem is isolated and fail-safe: if Bluetooth is off, denied, or unsupported, it silently no-ops and the Wi-Fi/hotspot mesh is unaffected.
 
-**Verification status:** the BLE transport compiles, analyzes clean, and is architecturally integrated, but Bluetooth cannot be exercised on an emulator or a single device — it requires on-device testing across multiple physical handsets to confirm real-world behavior (advertising quirks, MTU, multi-connection stability vary by OEM). Treat it as field-test-pending, not yet proven.
+### Wi-Fi Aware (NAN) — the high-throughput half
+
+BLE is universal but slow; Wi-Fi Aware is fast but hardware-gated. Running both is the hybrid Benoliel (FireChat/Open Garden) advocates — and Messy's cost-based transport selection is exactly that framework: each transport advertises a cost (`lan` 1, `wifiAware` 2, `wifiDirect` 3, `bluetooth` 4) and the router prefers the cheapest live link per peer, so Wi-Fi Aware carries bulk data where available and BLE fills the gaps everywhere else.
+
+Wi-Fi Aware needs a socket bound to a specific Android `Network`, which Dart can't do — so it lives in native Kotlin (`android/.../WifiAwareTransport.kt`), adapted from [NodleCode's production reference](https://github.com/NodleCode/wifi-aware). Both peers publish and subscribe; on discovery they exchange ids, the lower-nodeId side opens a `ServerSocket` and requests a `WifiAwareNetworkSpecifier` data-path, the other connects a socket over the peer's link-local IPv6. The native layer is a **transparent byte pipe** — it streams that socket's bytes to Dart over platform channels, where a `WifiAwareLink` feeds the identical `FrameReader` + signed handshake + crypto + routing as every other transport. If Wi-Fi Aware is unsupported (`isAvailable()` false) it no-ops.
+
+**Verification status:** both BLE and Wi-Fi Aware compile, analyze clean, and are architecturally integrated, but neither can be exercised on an emulator or a single device. They require on-device testing across multiple physical handsets — for Wi-Fi Aware, handsets that actually support NAN (many don't). Advertising, MTU, data-path setup, and multi-connection stability vary by OEM. Treat both radios as field-test-pending, not yet proven; the Wi-Fi/hotspot mesh remains the verified path.
 
 ### ConnectivityManager
 
