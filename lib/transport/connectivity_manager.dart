@@ -70,7 +70,10 @@ class ConnectivityManager {
   UdpDiscovery? _discovery;
   Timer? _dialTimer;
 
-  final Map<String, AuthenticatedLink> _links = {};
+  /// All live links to each peer — one per transport (Wi-Fi, BLE, Wi-Fi
+  /// Aware) running in parallel. A peer stays reachable as long as ANY of its
+  /// links is up; the fastest is preferred and failover is instant.
+  final Map<String, List<AuthenticatedLink>> _peerLinks = {};
   final Set<String> _dialing = {};
   final _linkUpController = StreamController<AuthenticatedLink>.broadcast();
   final _linkDownController = StreamController<String>.broadcast();
@@ -80,10 +83,29 @@ class ConnectivityManager {
   Stream<String> get onLinkDown => _linkDownController.stream;
   Stream<void> get onPeersChanged => _peersChangedController.stream;
 
-  List<AuthenticatedLink> get liveLinks => _links.values.toList();
+  /// The cheapest live link per peer (one entry per distinct peer) — what the
+  /// router forwards over, so a peer reachable on two radios isn't sent to
+  /// twice and always uses the fastest available.
+  List<AuthenticatedLink> get liveLinks =>
+      _peerLinks.values.map(pickBest).whereType<AuthenticatedLink>().toList();
+
   List<PeerAdvert> get visiblePeers => _discovery?.livePeers ?? const [];
 
-  AuthenticatedLink? linkFor(String nodeId) => _links[nodeId];
+  AuthenticatedLink? linkFor(String nodeId) {
+    final links = _peerLinks[nodeId];
+    return (links == null || links.isEmpty) ? null : pickBest(links);
+  }
+
+  /// Lowest cost hint wins: lan(1) < wifiAware(2) < wifiDirect(3) <
+  /// internet(4) < bluetooth(4).
+  static AuthenticatedLink? pickBest(List<AuthenticatedLink> links) {
+    if (links.isEmpty) return null;
+    return links
+        .reduce((a, b) => a.link.costHint <= b.link.costHint ? a : b);
+  }
+
+  bool _hasLinkVia(String nodeId, LinkTransport transport) =>
+      _peerLinks[nodeId]?.any((l) => l.link.transport == transport) ?? false;
 
   /// Well-known ports tried in order so peers can be probed directly even
   /// before a discovery beacon arrives (hotspot fallback).
@@ -119,7 +141,9 @@ class ConnectivityManager {
 
   void _dialAll() {
     for (final peer in visiblePeers) {
-      if (_links.containsKey(peer.nodeId)) continue;
+      // Still dial for a fast LAN link even if we already reach this peer over
+      // BLE/Wi-Fi Aware — parallel transports, best one preferred.
+      if (_hasLinkVia(peer.nodeId, LinkTransport.lan)) continue;
       if (_dialing.contains(peer.nodeId)) continue;
       // Deterministic tie-break so two peers don't cross-dial: the smaller
       // nodeId dials.
@@ -129,7 +153,7 @@ class ConnectivityManager {
     // Hotspot fallback: if beacons aren't getting through (some APs filter
     // broadcasts entirely), probe the gateway — on a phone hotspot the
     // host is always x.y.z.1 — on the well-known ports.
-    if (_links.isEmpty && visiblePeers.isEmpty) {
+    if (_peerLinks.isEmpty && visiblePeers.isEmpty) {
       _probeGateways();
     }
   }
@@ -145,7 +169,7 @@ class ConnectivityManager {
         if (parts[3] == '1') continue; // we ARE the hotspot host
         final gateway = '${parts[0]}.${parts[1]}.${parts[2]}.1';
         for (final port in knownPorts) {
-          if (_links.isNotEmpty) return;
+          if (_peerLinks.isNotEmpty) return;
           try {
             final socket = await Socket.connect(
               gateway,
@@ -259,13 +283,6 @@ class ConnectivityManager {
         return;
       }
 
-      // One link per peer: a fresh handshake wins over a possibly-stale
-      // existing link (TCP can take minutes to notice a dead peer).
-      final existing = _links.remove(claimedId);
-      if (existing != null) {
-        await existing.link.close();
-      }
-
       final authed = AuthenticatedLink(
         link: link,
         nodeId: claimedId,
@@ -274,16 +291,31 @@ class ConnectivityManager {
         ed25519Pub: ePub,
       );
       auth = authed;
-      _links[claimedId] = authed;
+      final list = _peerLinks.putIfAbsent(claimedId, () => []);
+      // Keep at most one link per transport: a fresh handshake replaces a
+      // possibly-stale same-transport link, but links on OTHER transports
+      // stay as parallel fallbacks.
+      final stale = list
+          .where((l) => l.link.transport == link.transport)
+          .toList();
+      for (final s in stale) {
+        list.remove(s);
+        await s.link.close();
+      }
+      list.add(authed);
+      final wasFirstLink = list.length == 1;
       link.state.listen((s) {
-        if (s == LinkState.down && identical(_links[claimedId], authed)) {
-          _links.remove(claimedId);
-          _linkDownController.add(claimedId);
-          _peersChangedController.add(null);
+        if (s != LinkState.down) return;
+        list.remove(authed);
+        if (list.isEmpty) {
+          _peerLinks.remove(claimedId);
+          _linkDownController.add(claimedId); // peer fully unreachable now
         }
+        // If other transports remain, the peer is still up via failover.
+        _peersChangedController.add(null);
       });
       _linkUpController.add(authed);
-      _peersChangedController.add(null);
+      if (wasFirstLink) _peersChangedController.add(null);
     } on Object {
       await link.close();
     }
@@ -293,9 +325,11 @@ class ConnectivityManager {
     _dialTimer?.cancel();
     await _discovery?.stop();
     await _server?.close();
-    for (final l in _links.values.toList()) {
-      await l.link.close();
+    for (final list in _peerLinks.values.toList()) {
+      for (final l in list.toList()) {
+        await l.link.close();
+      }
     }
-    _links.clear();
+    _peerLinks.clear();
   }
 }

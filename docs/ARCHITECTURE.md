@@ -97,8 +97,11 @@ Wi-Fi Aware needs a socket bound to a specific Android `Network`, which Dart can
 
 **Verification status:** both BLE and Wi-Fi Aware compile, analyze clean, and are architecturally integrated, but neither can be exercised on an emulator or a single device. They require on-device testing across multiple physical handsets — for Wi-Fi Aware, handsets that actually support NAN (many don't). Advertising, MTU, data-path setup, and multi-connection stability vary by OEM. Treat both radios as field-test-pending, not yet proven; the Wi-Fi/hotspot mesh remains the verified path.
 
-### ConnectivityManager
+### ConnectivityManager — parallel transports with failover
 
+Every transport (Wi-Fi/hotspot, BLE, Wi-Fi Aware) runs **simultaneously**. A peer may be reachable on several at once, so `ConnectivityManager` keeps `Map<nodeId, List<AuthenticatedLink>>` — **one link per transport per peer**, all live in parallel. The router forwards over the **lowest-cost** link (`pickBest`: lan < wifiAware < wifiDirect < bluetooth), and when it drops, the next-fastest link is already established, so failover is instant and the peer never goes unreachable while any radio still connects it. `onLinkDown` fires only when a peer's *last* link drops. This is what makes coverage consistent across a fleet of mixed handsets — a budget phone with no Wi-Fi Aware simply rides BLE + hotspot, while a flagship uses the faster path, and both interoperate.
+
+Historically:
 - Holds `Map<nodeId, List<Link>>`; picks the lowest-cost live link per peer.
 - Discovery loops: mDNS whenever on Wi-Fi; Wi-Fi Direct scan on user action or when no LAN peers found (duty-cycled 15 s scan / 45 s idle); internet dial when online and a contact has cached endpoints.
 - New link ⇒ handshake (`hello` frame: protocol version, nodeId, Ed25519-signed challenge — prevents nodeId spoofing) ⇒ hand to MeshRouter ⇒ **anti-entropy summary exchange** (each side lists carried envelope IDs; peers request what they lack).

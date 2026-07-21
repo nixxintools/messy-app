@@ -2,7 +2,7 @@ name: messy
 description: "Messy — serverless mesh messenger. E2E-encrypted messaging, photos, and video over Wi-Fi LAN, Wi-Fi Direct hotspots, and opportunistic internet P2P."
 publish_to: 'none'
 
-version: 2.3.0+1
+version: 2.4.0+1
 
 environment:
   sdk: ^3.12.2
