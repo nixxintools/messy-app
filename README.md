@@ -32,7 +32,7 @@ Messy starts locked down and lets *you* decide to loosen it — never the other 
 - **Local-only storage.** One SQLite database on your phone (with `secure_delete` on), no cloud, no backups, no telemetry. Nothing ever leaves your device except encrypted envelopes to peers.
 - **Verified contacts.** Scan each other's QR codes in person and the app marks the contact verified — the keys came from a phone you could see. Contacts added over the air get a 6-word fingerprint phrase both of you can compare aloud.
 
-The honest fine print lives in [docs/SECURITY.md](docs/SECURITY.md) — including what v1 does *not* protect (no forward secrecy yet, relays can see who talks to whom, the public room is readable by anyone running the app).
+The honest fine print lives in [docs/SECURITY.md](docs/SECURITY.md) — including what Messy does *not* protect (no post-compromise security yet, relays can see who talks to whom, the public rooms are readable by anyone running the app).
 
 ## How it works
 
@@ -48,9 +48,28 @@ your phone ──Wi-Fi/hotspot──> nearby phones ──carried ciphertext─�
 
 Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · wireframes: [docs/wireframes.html](docs/wireframes.html)
 
+## Screenshots
+
+<table>
+<tr>
+<td><img src="docs/screenshots/chat_list.png" width="200" alt="Chat list — Local and Media public rooms pinned above contact chats"><br><sub>Chat list</sub></td>
+<td><img src="docs/screenshots/local_chat.png" width="200" alt="Local public room conversation"><br><sub>Local room</sub></td>
+<td><img src="docs/screenshots/groups.png" width="200" alt="Groups tab"><br><sub>Groups</sub></td>
+<td><img src="docs/screenshots/media_gallery.png" width="200" alt="Media gallery grid"><br><sub>Media gallery</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/contacts.png" width="200" alt="Contacts list"><br><sub>Contacts</sub></td>
+<td><img src="docs/screenshots/contact_detail.png" width="200" alt="Contact detail with 6-word fingerprint verification"><br><sub>Fingerprint verification</sub></td>
+<td><img src="docs/screenshots/settings.png" width="200" alt="Settings — mesh, PIN, auto-wipe, relay"><br><sub>Settings</sub></td>
+<td></td>
+</tr>
+</table>
+
+Screens taken from the app running live on a real two-phone mesh test. More mockups (onboarding, add-contact/QR flow) in [docs/wireframes.html](docs/wireframes.html).
+
 ## Status
 
-Working v1 (Android):
+Working (Android), v2:
 
 - ✅ PIN gate (mandatory setup, daily re-entry, off-switch in Settings)
 - ✅ Identity + QR / nearby contact exchange
@@ -78,4 +97,4 @@ Try the mesh with two phones on one Wi-Fi network — or turn on one phone's hot
 
 ## License
 
-No license granted yet — all rights reserved until one is chosen.
+[MIT](LICENSE) — free to use, modify, and distribute.
