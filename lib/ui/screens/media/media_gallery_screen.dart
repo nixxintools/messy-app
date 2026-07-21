@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/db/database.dart';
 import '../../providers/providers.dart';
 import '../home_shell.dart';
+import '../../widgets/messy_title.dart';
 
 /// Media tab: every photo/video on this device (sent and received, from
 /// chats, groups, and the public Media channel) in a gallery grid.
@@ -22,7 +23,7 @@ class MediaGalleryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Media'),
+        title: const MessyTitle('Media'),
         actions: const [
           Padding(padding: EdgeInsets.only(right: 12), child: MeshStatusChip()),
         ],
@@ -116,7 +117,7 @@ class _MediaTile extends ConsumerWidget {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => Scaffold(
-            appBar: AppBar(),
+            appBar: AppBar(title: const MessyTitle('Media')),
             body: Center(
               child: InteractiveViewer(
                 maxScale: 6,

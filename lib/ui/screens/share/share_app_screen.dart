@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../services/share/apk_share_service.dart';
 import '../../widgets/web_logo.dart';
+import '../../widgets/messy_title.dart';
 
 /// Pass Messy on to the people around you — including with no internet.
 class ShareAppScreen extends ConsumerStatefulWidget {
@@ -73,7 +74,7 @@ class _ShareAppScreenState extends ConsumerState<ShareAppScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Share Messy')),
+      appBar: AppBar(title: const MessyTitle('Share Messy')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

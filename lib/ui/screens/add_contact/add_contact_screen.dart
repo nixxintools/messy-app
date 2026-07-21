@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../providers/providers.dart';
+import '../../widgets/messy_title.dart';
 
 /// Wireframe screen 5: My QR / Scan / Nearby tabs.
 class AddContactScreen extends ConsumerWidget {
@@ -16,7 +17,7 @@ class AddContactScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Add contact'),
+          title: const MessyTitle('Add contact'),
           bottom: const TabBar(tabs: [
             Tab(text: 'My QR'),
             Tab(text: 'Scan'),

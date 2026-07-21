@@ -10,6 +10,7 @@ import '../../../domain/entities/message.dart' as domain;
 import '../../../services/mesh/mesh_router.dart';
 import '../../providers/providers.dart';
 import '../contacts/contact_detail_screen.dart';
+import '../../widgets/messy_title.dart';
 
 /// Public room + 1:1 chat — wireframe screens 3 & 4.
 class ChatScreen extends ConsumerStatefulWidget {
@@ -90,7 +91,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: MessyTitle(widget.title),
         actions: [
           if (!_isPublic && !_isGroup && !_isMediaRoom)
             IconButton(

@@ -6,6 +6,7 @@ import '../../../services/contacts/contact_service.dart';
 import '../../providers/providers.dart';
 import '../home_shell.dart';
 import 'contact_detail_screen.dart';
+import '../../widgets/messy_title.dart';
 
 class ContactsScreen extends ConsumerWidget {
   const ContactsScreen({super.key});
@@ -20,7 +21,7 @@ class ContactsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Contacts'),
+        title: const MessyTitle('Contacts'),
         actions: const [
           Padding(padding: EdgeInsets.only(right: 12), child: MeshStatusChip()),
         ],

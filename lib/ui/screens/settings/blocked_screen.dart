@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/db/database.dart';
 import '../../providers/providers.dart';
+import '../../widgets/messy_title.dart';
 
 /// View and lift blocks. "Auto" entries came from your contacts' blocklists.
 class BlockedScreen extends ConsumerWidget {
@@ -13,7 +14,7 @@ class BlockedScreen extends ConsumerWidget {
     final blocked =
         ref.watch(blockedProvider).valueOrNull ?? const <BlockedRow>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('Blocked')),
+      appBar: AppBar(title: const MessyTitle('Blocked')),
       body: blocked.isEmpty
           ? const Center(
               child: Padding(

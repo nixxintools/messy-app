@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/db/database.dart';
 import '../../providers/providers.dart';
+import '../../widgets/messy_title.dart';
 
 /// Name the group, pick members from contacts, send E2E invites.
 class CreateGroupScreen extends ConsumerStatefulWidget {
@@ -33,7 +34,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     final contacts =
         ref.watch(contactsProvider).valueOrNull ?? const <ContactRow>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('New group')),
+      appBar: AppBar(title: const MessyTitle('New group')),
       body: Column(
         children: [
           Padding(

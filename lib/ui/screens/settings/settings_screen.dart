@@ -7,6 +7,7 @@ import '../../../services/security/secure_screen_service.dart';
 import '../../providers/providers.dart';
 import '../home_shell.dart';
 import 'blocked_screen.dart';
+import '../../widgets/messy_title.dart';
 
 /// Wireframe screen 7.
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -105,7 +106,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final core = ref.watch(coreProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const MessyTitle('Settings'),
         actions: const [
           Padding(padding: EdgeInsets.only(right: 12), child: MeshStatusChip()),
         ],

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../services/crypto/fingerprint.dart';
 import '../../providers/providers.dart';
+import '../../widgets/messy_title.dart';
 
 /// Wireframe screen 6: trust status, fingerprint phrase, disappearing timer.
 class ContactDetailScreen extends ConsumerWidget {
@@ -33,7 +34,7 @@ class ContactDetailScreen extends ConsumerWidget {
         fingerprintPhrase(core.identity.x25519Pub, contact.x25519Pub);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact')),
+      appBar: AppBar(title: const MessyTitle('Contact')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

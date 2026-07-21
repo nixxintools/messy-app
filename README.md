@@ -1,4 +1,4 @@
-### 📦 [**Download the APK — latest release**](https://github.com/nixxintools/messy-app/releases/download/v2.7.0/messy.apk) · Android 10+, sideload directly, no Play Store needed · [Previous releases](https://github.com/nixxintools/messy-app/releases/latest)
+### 📦 [**Download the APK — latest release**](https://github.com/nixxintools/messy-app/releases/download/v2.8.0/messy.apk) · Android 10+, sideload directly, no Play Store needed · [Previous releases](https://github.com/nixxintools/messy-app/releases/latest)
 
 ---
 
@@ -75,7 +75,7 @@ Screens taken from the app running live on a real two-phone mesh test. More mock
 
 ## Status
 
-Working (Android) — current release **v2.5.0**:
+Working (Android) — current release **v2.8.0**:
 
 - ✅ PIN gate (mandatory setup, daily re-entry, off-switch in Settings)
 - ✅ Identity + QR / nearby contact exchange
@@ -97,6 +97,7 @@ Working (Android) — current release **v2.5.0**:
   - All run alongside Wi-Fi/hotspot behind one transport abstraction; the router keeps every transport's link to a peer live **in parallel** and forwards over the fastest, failing over instantly when one drops.
   - ⚠️ **The three radios (BLE, Wi-Fi Aware, Wi-Fi Direct) are integrated and compile/test clean but are not yet verified on hardware** — they need on-device field testing across multiple handsets. The Wi-Fi/hotspot path is the proven one. See [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - ✅ **Startup radio gate** — prompts to enable Bluetooth + Wi-Fi before the mesh runs (both cover the transports; hotspot is suggested situationally, not required). Verified on device.
+- ✅ **Share the app with people nearby** — serve Messy's own APK from a local web server with a QR + link, so someone on your hotspot can install it with **no internet at all**; plus the normal share sheet (Bluetooth/Quick Share/WhatsApp). Handy when you're the only one at the campsite who has it.
 - ⏳ Roadmap: on-device field-testing of the three radios, opportunistic internet P2P (WebRTC, serverless), post-compromise security (ratcheting), forward secrecy for media via per-transfer keys
 
 ## Build & run
