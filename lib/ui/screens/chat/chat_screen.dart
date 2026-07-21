@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/well_known.dart';
 import '../../../data/db/database.dart';
 import '../../../domain/entities/message.dart' as domain;
 import '../../../services/mesh/mesh_router.dart';
@@ -28,7 +29,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   bool get _isPublic => widget.chatId == MeshRouter.publicRoomName;
 
+  bool get _isMediaRoom => widget.chatId == WellKnown.mediaRoomId;
+
   bool get _isGroup {
+    if (_isMediaRoom) return false; // styled as a public channel instead
     final groups = ref.read(groupsProvider).valueOrNull ?? const [];
     return groups.any((g) => g.groupId == widget.chatId);
   }
@@ -88,7 +92,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
-          if (!_isPublic && !_isGroup)
+          if (!_isPublic && !_isGroup && !_isMediaRoom)
             IconButton(
               icon: const Icon(Icons.info_outline),
               onPressed: () => Navigator.of(context).push(
@@ -111,10 +115,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               _isPublic
                   ? '⚠ Readable by anyone nearby · messages vanish '
                       'after 24 h'
-                  : _isGroup
-                      ? '\u{1F512} Encrypted group · only invited members '
-                          'can read'
-                      : '\u{1F512} End-to-end encrypted',
+                  : _isMediaRoom
+                      ? '⚠ Public media channel · visible to anyone '
+                          'nearby · vanishes after 24 h'
+                      : _isGroup
+                          ? '\u{1F512} Encrypted group · only invited '
+                              'members can read'
+                          : '\u{1F512} End-to-end encrypted',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelSmall,
             ),
@@ -131,9 +138,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           SafeArea(
             child: Row(
               children: [
-                // Media is 1:1 only in v1 — flooding chunks to a whole
-                // group would multiply mesh traffic per member.
-                if (!_isPublic && !_isGroup) ...[
+                // Media: 1:1 chats and the public Media channel. Private
+                // groups stay text-only to limit mesh traffic.
+                if ((!_isPublic && !_isGroup) || _isMediaRoom) ...[
                   IconButton(
                     icon: const Icon(Icons.photo_outlined),
                     onPressed: () => _sendMedia(video: false),

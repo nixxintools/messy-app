@@ -5,6 +5,8 @@ import '../providers/providers.dart';
 import 'add_contact/add_contact_screen.dart';
 import 'chat_list/chat_list_screen.dart';
 import 'contacts/contacts_screen.dart';
+import 'group/groups_screen.dart';
+import 'media/media_gallery_screen.dart';
 import 'settings/settings_screen.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -28,20 +30,24 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       data: (_) => Scaffold(
         body: switch (_tab) {
           0 => const ChatListScreen(),
-          1 => const ContactsScreen(),
+          1 => const GroupsScreen(),
+          2 => const MediaGalleryScreen(),
+          3 => const ContactsScreen(),
           _ => const SettingsScreen(),
         },
-        floatingActionButton: _tab == 2
-            ? null
-            : FloatingActionButton(
+        floatingActionButton: (_tab == 0 || _tab == 3)
+            ? FloatingActionButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const AddContactScreen(),
                   ),
                 ),
                 child: const Icon(Icons.person_add),
-              ),
+              )
+            : null,
         bottomNavigationBar: NavigationBar(
+          height: 52,
+          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
           selectedIndex: _tab,
           onDestinationSelected: (i) => setState(() => _tab = i),
           destinations: const [
@@ -49,6 +55,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               icon: Icon(Icons.chat_bubble_outline),
               selectedIcon: Icon(Icons.chat_bubble),
               label: 'Chats',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.groups_outlined),
+              selectedIcon: Icon(Icons.groups),
+              label: 'Groups',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.photo_library_outlined),
+              selectedIcon: Icon(Icons.photo_library),
+              label: 'Media',
             ),
             NavigationDestination(
               icon: Icon(Icons.people_outline),

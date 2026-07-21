@@ -12,6 +12,7 @@ import '../../domain/codec/frame_codec.dart';
 import '../../domain/entities/envelope.dart';
 import '../../domain/entities/message.dart' as domain;
 import '../../transport/connectivity_manager.dart';
+import '../../core/well_known.dart';
 import '../crypto/identity_service.dart';
 import '../crypto/session_crypto.dart';
 import '../transfer/media_store.dart';
@@ -161,11 +162,15 @@ class MeshRouter {
   }
 
   /// Publishes to a group: floods like a public post (every phone relays)
-  /// but only holders of the group key can decrypt.
+  /// but only holders of the group key can decrypt. Also used for the
+  /// well-known Media channel and for group media (manifest/chunks).
   Future<String> sendGroup({
     required GroupRow group,
     required List<int> plaintext,
     Uint8List? messageId,
+    int payloadType = Protocol.payloadGroupText,
+    int chunkIndex = 0,
+    int chunkTotal = 0,
   }) async {
     final id = messageId ?? _newMessageId();
     final nonce = crypto.newNonce();
@@ -177,9 +182,9 @@ class MeshRouter {
       ttl: Protocol.ttlDirect,
       hopCount: 0,
       timestampMs: DateTime.now().millisecondsSinceEpoch,
-      payloadType: Protocol.payloadGroupText,
-      chunkIndex: 0,
-      chunkTotal: 0,
+      payloadType: payloadType,
+      chunkIndex: chunkIndex,
+      chunkTotal: chunkTotal,
       nonce: nonce,
       ciphertext: Uint8List(0),
     );
@@ -197,8 +202,8 @@ class MeshRouter {
       hopCount: 0,
       timestampMs: env.timestampMs,
       payloadType: env.payloadType,
-      chunkIndex: 0,
-      chunkTotal: 0,
+      chunkIndex: chunkIndex,
+      chunkTotal: chunkTotal,
       nonce: nonce,
       ciphertext: concatBytes([box.cipherText, box.mac.bytes]),
     );
@@ -303,16 +308,23 @@ class MeshRouter {
       await _relay(env, frame, from, recipientNodeId: 'public');
       return;
     }
-    if (env.payloadType == Protocol.payloadGroupText) {
-      // Group posts flood like public ones — members decrypt, everyone
-      // relays. The recipient field is the group tag, not a real key.
-      await _deliverGroupIfMember(env);
-      await _relay(env, frame, from, recipientNodeId: 'group');
-      return;
-    }
     if (bytesEqual(env.recipientPub, identity.x25519Pub)) {
       await _deliverToMe(env);
       return;
+    }
+    // Group / media-channel posts flood like public ones — members decrypt,
+    // everyone relays. The recipient field is the group tag, not a key.
+    if (env.payloadType == Protocol.payloadGroupText ||
+        env.payloadType == Protocol.payloadMediaManifest ||
+        env.payloadType == Protocol.payloadMediaChunk) {
+      final group = await (db.select(db.groups)
+            ..where((g) => g.groupId.equals(hexEncode(env.recipientPub))))
+          .getSingleOrNull();
+      if (group != null) {
+        await _deliverGroup(env, group);
+        await _relay(env, frame, from, recipientNodeId: 'group');
+        return;
+      }
     }
     await _relay(env, frame, from, recipientNodeId: nodeIdOf(env.recipientPub));
   }
@@ -448,13 +460,12 @@ class MeshRouter {
     );
   }
 
-  Future<void> _deliverGroupIfMember(Envelope env) async {
-    final groupId = hexEncode(env.recipientPub);
-    final group = await (db.select(db.groups)
-          ..where((g) => g.groupId.equals(groupId)))
-        .getSingleOrNull();
-    if (group == null) return; // not a member — we just relay
+  /// Delivers a group (or Media-channel) envelope we hold the key for.
+  /// No receipts — group posts are broadcasts, like the public room.
+  Future<void> _deliverGroup(Envelope env, GroupRow group) async {
     if (bytesEqual(env.senderPub, identity.x25519Pub)) return;
+    final groupId = group.groupId;
+    final isMediaRoom = groupId == WellKnown.mediaRoomId;
     final cipher = env.ciphertext;
     final plain = await crypto.openWithKey(
       keyBytes: group.key,
@@ -463,31 +474,82 @@ class MeshRouter {
       tag: cipher.sublist(cipher.length - 16),
       aad: EnvelopeCodec.aadOf(env),
     );
-    final body = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
     final now = DateTime.now().millisecondsSinceEpoch;
-    final disappearSecs = body['d'] as int?;
-    await db.into(db.messages).insertOnConflictUpdate(
-          MessagesCompanion(
-            messageId: Value(env.messageIdHex),
-            chatId: Value(groupId),
-            direction: Value(domain.MessageDirection.incoming.index),
-            payloadType: Value(env.payloadType),
-            body: Value((body['t'] as String?) ?? ''),
-            senderName: Value(body['n'] as String?),
-            senderNodeId: Value(nodeIdOf(env.senderPub)),
-            sentAt: Value(env.timestampMs),
-            receivedAt: Value(now),
-            expiresAt: Value(
-              disappearSecs == null ? null : now + disappearSecs * 1000,
-            ),
-            status: Value(domain.MessageStatus.delivered.index),
-          ),
+
+    int? expiryFor(int? disappearSecs) => isMediaRoom
+        // Public channel: always 24 h, like the Local room.
+        ? now + Protocol.publicRetention.inMilliseconds
+        : (disappearSecs == null ? null : now + disappearSecs * 1000);
+
+    switch (env.payloadType) {
+      case Protocol.payloadGroupText:
+        final body = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
+        await db.into(db.messages).insertOnConflictUpdate(
+              MessagesCompanion(
+                messageId: Value(env.messageIdHex),
+                chatId: Value(groupId),
+                direction: Value(domain.MessageDirection.incoming.index),
+                payloadType: Value(env.payloadType),
+                body: Value((body['t'] as String?) ?? ''),
+                senderName: Value(body['n'] as String?),
+                senderNodeId: Value(nodeIdOf(env.senderPub)),
+                sentAt: Value(env.timestampMs),
+                receivedAt: Value(now),
+                expiresAt: Value(expiryFor(body['d'] as int?)),
+                status: Value(domain.MessageStatus.delivered.index),
+              ),
+            );
+        onIncoming?.call(
+          groupId,
+          '${group.name} · ${(body['n'] as String?) ?? 'member'}',
+          (body['t'] as String?) ?? '',
         );
-    onIncoming?.call(
-      groupId,
-      '${group.name} · ${(body['n'] as String?) ?? 'member'}',
-      (body['t'] as String?) ?? '',
-    );
+      case Protocol.payloadMediaManifest:
+        final m = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
+        final mediaId = env.messageIdHex;
+        await db.into(db.mediaItems).insertOnConflictUpdate(
+              MediaItemsCompanion(
+                mediaId: Value(mediaId),
+                messageId: Value(env.messageIdHex),
+                mimeType: Value(
+                    (m['mime'] as String?) ?? 'application/octet-stream'),
+                totalSize: Value((m['size'] as num).toInt()),
+                chunkTotal: Value((m['total'] as num).toInt()),
+                sha256: Value(b64uDecode(m['sha'] as String)),
+              ),
+            );
+        await db.into(db.messages).insertOnConflictUpdate(
+              MessagesCompanion(
+                messageId: Value(env.messageIdHex),
+                chatId: Value(groupId),
+                direction: Value(domain.MessageDirection.incoming.index),
+                payloadType: Value(env.payloadType),
+                body: Value((m['name'] as String?) ?? 'media'),
+                senderName: Value(m['sender'] as String?),
+                senderNodeId: Value(nodeIdOf(env.senderPub)),
+                mediaId: Value(mediaId),
+                sentAt: Value(env.timestampMs),
+                receivedAt: Value(now),
+                expiresAt: Value(expiryFor(m['d'] as int?)),
+                status: Value(domain.MessageStatus.delivered.index),
+              ),
+            );
+        await _tryAssemble(mediaId, env, receipt: false);
+        onIncoming?.call(
+          groupId,
+          '${group.name} · ${(m['sender'] as String?) ?? 'member'}',
+          'Shared a file',
+        );
+      case Protocol.payloadMediaChunk:
+        await db.into(db.mediaChunks).insertOnConflictUpdate(
+              MediaChunksCompanion(
+                mediaId: Value(env.messageIdHex),
+                chunkIndex: Value(env.chunkIndex),
+                data: Value(Uint8List.fromList(plain)),
+              ),
+            );
+        await _tryAssemble(env.messageIdHex, env, receipt: false);
+    }
   }
 
   Future<String> _ensureChatWithSender(Envelope env, String? name) async {
@@ -594,7 +656,8 @@ class MeshRouter {
     await _tryAssemble(mediaId, env);
   }
 
-  Future<void> _tryAssemble(String mediaId, Envelope env) async {
+  Future<void> _tryAssemble(String mediaId, Envelope env,
+      {bool receipt = true}) async {
     final media = await (db.select(db.mediaItems)
           ..where((m) => m.mediaId.equals(mediaId)))
         .getSingleOrNull();
@@ -616,6 +679,7 @@ class MeshRouter {
     ));
     await (db.delete(db.mediaChunks)..where((c) => c.mediaId.equals(mediaId)))
         .go();
+    if (!receipt) return; // group/channel media: notified at manifest time
     await _sendReceipt(env);
     final msg = await (db.select(db.messages)
           ..where((m) => m.messageId.equals(media.messageId)))

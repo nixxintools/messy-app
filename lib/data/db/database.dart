@@ -1,6 +1,8 @@
 ﻿import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../../core/well_known.dart';
+
 part 'database.g.dart';
 
 /// Local-only SQLite -- docs/ARCHITECTURE.md section 8. No cloud, no sync.
@@ -152,12 +154,29 @@ class MessyDatabase extends _$MessyDatabase {
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA secure_delete = ON');
-          // The public room always exists.
+          // The public rooms always exist.
           await into(chats).insertOnConflictUpdate(
             const ChatsCompanion(
               chatId: Value('local'),
               nodeId: Value(null),
             ),
+          );
+          // Global media channel — a well-known group every install joins.
+          await into(groups).insert(
+            GroupsCompanion(
+              groupId: Value(WellKnown.mediaRoomId),
+              name: const Value(WellKnown.mediaRoomName),
+              key: Value(WellKnown.mediaRoomKey),
+              createdAt: const Value(0),
+            ),
+            mode: InsertMode.insertOrIgnore,
+          );
+          await into(chats).insert(
+            ChatsCompanion(
+              chatId: Value(WellKnown.mediaRoomId),
+              nodeId: const Value(null),
+            ),
+            mode: InsertMode.insertOrIgnore,
           );
         },
       );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/db/database.dart';
 import '../../../services/mesh/mesh_router.dart';
+import '../../../core/well_known.dart';
 import '../../providers/providers.dart';
 import '../chat/chat_screen.dart';
 import '../group/create_group_screen.dart';
@@ -40,7 +41,9 @@ class ChatListScreen extends ConsumerWidget {
       ..sort(bySorted);
     final groupChats = chats
         .where((c) =>
-            c.nodeId == null && c.chatId != MeshRouter.publicRoomName)
+            c.nodeId == null &&
+            c.chatId != MeshRouter.publicRoomName &&
+            c.chatId != WellKnown.mediaRoomId)
         .toList()
       ..sort(bySorted);
 
@@ -70,6 +73,14 @@ class ChatListScreen extends ConsumerWidget {
                 : _preview(lastOf(MeshRouter.publicRoomName)!),
             isPublic: true,
             onTap: () => _open(context, MeshRouter.publicRoomName, 'Local'),
+          ),
+          _ChatTile(
+            title: 'Media',
+            subtitle: lastOf(WellKnown.mediaRoomId) == null
+                ? 'Public channel — photos & videos for everyone nearby'
+                : _preview(lastOf(WellKnown.mediaRoomId)!),
+            isPublic: true,
+            onTap: () => _open(context, WellKnown.mediaRoomId, 'Media'),
           ),
           for (final chat in groupChats)
             _ChatTile(

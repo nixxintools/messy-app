@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/bytes.dart';
 import '../../core/constants.dart';
+import '../../core/well_known.dart';
 import '../../data/db/database.dart';
 import '../../domain/entities/message.dart' as domain;
 import '../crypto/identity_service.dart';
@@ -136,7 +137,10 @@ class ChatService {
 
   Future<void> _sendGroupText(GroupRow group, String text) async {
     final chat = await getChat(group.groupId);
-    final disappear = chat?.disappearAfterSecs;
+    // The public Media channel always expires at 24 h, like Local.
+    final disappear = group.groupId == WellKnown.mediaRoomId
+        ? Protocol.publicRetention.inSeconds
+        : chat?.disappearAfterSecs;
     final idBytes = Uint8List.fromList(Uuid.parse(_uuid.v7()));
     final idHex = hexEncode(idBytes);
     final now = DateTime.now().millisecondsSinceEpoch;
