@@ -16,6 +16,7 @@ abstract final class Protocol {
   static const int frameContactReq = 0x07;
   static const int frameContactAccept = 0x08;
   static const int framePrekeys = 0x09; // signed one-time-prekey bundle
+  static const int frameBlockList = 0x0A; // signed block-vote gossip (WoT)
 
   // Payload types (inside envelope)
   static const int payloadText = 0x01;

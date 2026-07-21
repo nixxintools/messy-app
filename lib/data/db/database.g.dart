@@ -1569,6 +1569,21 @@ class $MediaItemsTable extends MediaItems
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _awaitingConsentMeta = const VerificationMeta(
+    'awaitingConsent',
+  );
+  @override
+  late final GeneratedColumn<bool> awaitingConsent = GeneratedColumn<bool>(
+    'awaiting_consent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("awaiting_consent" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     mediaId,
@@ -1579,6 +1594,7 @@ class $MediaItemsTable extends MediaItems
     chunkTotal,
     sha256,
     complete,
+    awaitingConsent,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1652,6 +1668,15 @@ class $MediaItemsTable extends MediaItems
         complete.isAcceptableOrUnknown(data['complete']!, _completeMeta),
       );
     }
+    if (data.containsKey('awaiting_consent')) {
+      context.handle(
+        _awaitingConsentMeta,
+        awaitingConsent.isAcceptableOrUnknown(
+          data['awaiting_consent']!,
+          _awaitingConsentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1693,6 +1718,10 @@ class $MediaItemsTable extends MediaItems
         DriftSqlType.bool,
         data['${effectivePrefix}complete'],
       )!,
+      awaitingConsent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}awaiting_consent'],
+      )!,
     );
   }
 
@@ -1711,6 +1740,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
   final int chunkTotal;
   final Uint8List sha256;
   final bool complete;
+  final bool awaitingConsent;
   const MediaRow({
     required this.mediaId,
     required this.messageId,
@@ -1720,6 +1750,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
     required this.chunkTotal,
     required this.sha256,
     required this.complete,
+    required this.awaitingConsent,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1734,6 +1765,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
     map['chunk_total'] = Variable<int>(chunkTotal);
     map['sha256'] = Variable<Uint8List>(sha256);
     map['complete'] = Variable<bool>(complete);
+    map['awaiting_consent'] = Variable<bool>(awaitingConsent);
     return map;
   }
 
@@ -1749,6 +1781,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
       chunkTotal: Value(chunkTotal),
       sha256: Value(sha256),
       complete: Value(complete),
+      awaitingConsent: Value(awaitingConsent),
     );
   }
 
@@ -1766,6 +1799,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
       chunkTotal: serializer.fromJson<int>(json['chunkTotal']),
       sha256: serializer.fromJson<Uint8List>(json['sha256']),
       complete: serializer.fromJson<bool>(json['complete']),
+      awaitingConsent: serializer.fromJson<bool>(json['awaitingConsent']),
     );
   }
   @override
@@ -1780,6 +1814,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
       'chunkTotal': serializer.toJson<int>(chunkTotal),
       'sha256': serializer.toJson<Uint8List>(sha256),
       'complete': serializer.toJson<bool>(complete),
+      'awaitingConsent': serializer.toJson<bool>(awaitingConsent),
     };
   }
 
@@ -1792,6 +1827,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
     int? chunkTotal,
     Uint8List? sha256,
     bool? complete,
+    bool? awaitingConsent,
   }) => MediaRow(
     mediaId: mediaId ?? this.mediaId,
     messageId: messageId ?? this.messageId,
@@ -1801,6 +1837,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
     chunkTotal: chunkTotal ?? this.chunkTotal,
     sha256: sha256 ?? this.sha256,
     complete: complete ?? this.complete,
+    awaitingConsent: awaitingConsent ?? this.awaitingConsent,
   );
   MediaRow copyWithCompanion(MediaItemsCompanion data) {
     return MediaRow(
@@ -1814,6 +1851,9 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
           : this.chunkTotal,
       sha256: data.sha256.present ? data.sha256.value : this.sha256,
       complete: data.complete.present ? data.complete.value : this.complete,
+      awaitingConsent: data.awaitingConsent.present
+          ? data.awaitingConsent.value
+          : this.awaitingConsent,
     );
   }
 
@@ -1827,7 +1867,8 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
           ..write('totalSize: $totalSize, ')
           ..write('chunkTotal: $chunkTotal, ')
           ..write('sha256: $sha256, ')
-          ..write('complete: $complete')
+          ..write('complete: $complete, ')
+          ..write('awaitingConsent: $awaitingConsent')
           ..write(')'))
         .toString();
   }
@@ -1842,6 +1883,7 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
     chunkTotal,
     $driftBlobEquality.hash(sha256),
     complete,
+    awaitingConsent,
   );
   @override
   bool operator ==(Object other) =>
@@ -1854,7 +1896,8 @@ class MediaRow extends DataClass implements Insertable<MediaRow> {
           other.totalSize == this.totalSize &&
           other.chunkTotal == this.chunkTotal &&
           $driftBlobEquality.equals(other.sha256, this.sha256) &&
-          other.complete == this.complete);
+          other.complete == this.complete &&
+          other.awaitingConsent == this.awaitingConsent);
 }
 
 class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
@@ -1866,6 +1909,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
   final Value<int> chunkTotal;
   final Value<Uint8List> sha256;
   final Value<bool> complete;
+  final Value<bool> awaitingConsent;
   final Value<int> rowid;
   const MediaItemsCompanion({
     this.mediaId = const Value.absent(),
@@ -1876,6 +1920,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
     this.chunkTotal = const Value.absent(),
     this.sha256 = const Value.absent(),
     this.complete = const Value.absent(),
+    this.awaitingConsent = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MediaItemsCompanion.insert({
@@ -1887,6 +1932,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
     required int chunkTotal,
     required Uint8List sha256,
     this.complete = const Value.absent(),
+    this.awaitingConsent = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : mediaId = Value(mediaId),
        messageId = Value(messageId),
@@ -1903,6 +1949,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
     Expression<int>? chunkTotal,
     Expression<Uint8List>? sha256,
     Expression<bool>? complete,
+    Expression<bool>? awaitingConsent,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1914,6 +1961,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
       if (chunkTotal != null) 'chunk_total': chunkTotal,
       if (sha256 != null) 'sha256': sha256,
       if (complete != null) 'complete': complete,
+      if (awaitingConsent != null) 'awaiting_consent': awaitingConsent,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1927,6 +1975,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
     Value<int>? chunkTotal,
     Value<Uint8List>? sha256,
     Value<bool>? complete,
+    Value<bool>? awaitingConsent,
     Value<int>? rowid,
   }) {
     return MediaItemsCompanion(
@@ -1938,6 +1987,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
       chunkTotal: chunkTotal ?? this.chunkTotal,
       sha256: sha256 ?? this.sha256,
       complete: complete ?? this.complete,
+      awaitingConsent: awaitingConsent ?? this.awaitingConsent,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1969,6 +2019,9 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
     if (complete.present) {
       map['complete'] = Variable<bool>(complete.value);
     }
+    if (awaitingConsent.present) {
+      map['awaiting_consent'] = Variable<bool>(awaitingConsent.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1986,6 +2039,7 @@ class MediaItemsCompanion extends UpdateCompanion<MediaRow> {
           ..write('chunkTotal: $chunkTotal, ')
           ..write('sha256: $sha256, ')
           ..write('complete: $complete, ')
+          ..write('awaitingConsent: $awaitingConsent, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4027,6 +4081,605 @@ class PeerPrekeysCompanion extends UpdateCompanion<PeerPrekeyRow> {
   }
 }
 
+class $BlockedNodesTable extends BlockedNodes
+    with TableInfo<$BlockedNodesTable, BlockedRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BlockedNodesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _nodeIdMeta = const VerificationMeta('nodeId');
+  @override
+  late final GeneratedColumn<String> nodeId = GeneratedColumn<String>(
+    'node_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _blockedAtMeta = const VerificationMeta(
+    'blockedAt',
+  );
+  @override
+  late final GeneratedColumn<int> blockedAt = GeneratedColumn<int>(
+    'blocked_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _autoMeta = const VerificationMeta('auto');
+  @override
+  late final GeneratedColumn<bool> auto = GeneratedColumn<bool>(
+    'auto',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [nodeId, displayName, blockedAt, auto];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'blocked_nodes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BlockedRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('node_id')) {
+      context.handle(
+        _nodeIdMeta,
+        nodeId.isAcceptableOrUnknown(data['node_id']!, _nodeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nodeIdMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('blocked_at')) {
+      context.handle(
+        _blockedAtMeta,
+        blockedAt.isAcceptableOrUnknown(data['blocked_at']!, _blockedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_blockedAtMeta);
+    }
+    if (data.containsKey('auto')) {
+      context.handle(
+        _autoMeta,
+        auto.isAcceptableOrUnknown(data['auto']!, _autoMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {nodeId};
+  @override
+  BlockedRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BlockedRow(
+      nodeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}node_id'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      ),
+      blockedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}blocked_at'],
+      )!,
+      auto: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto'],
+      )!,
+    );
+  }
+
+  @override
+  $BlockedNodesTable createAlias(String alias) {
+    return $BlockedNodesTable(attachedDatabase, alias);
+  }
+}
+
+class BlockedRow extends DataClass implements Insertable<BlockedRow> {
+  final String nodeId;
+  final String? displayName;
+  final int blockedAt;
+  final bool auto;
+  const BlockedRow({
+    required this.nodeId,
+    this.displayName,
+    required this.blockedAt,
+    required this.auto,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['node_id'] = Variable<String>(nodeId);
+    if (!nullToAbsent || displayName != null) {
+      map['display_name'] = Variable<String>(displayName);
+    }
+    map['blocked_at'] = Variable<int>(blockedAt);
+    map['auto'] = Variable<bool>(auto);
+    return map;
+  }
+
+  BlockedNodesCompanion toCompanion(bool nullToAbsent) {
+    return BlockedNodesCompanion(
+      nodeId: Value(nodeId),
+      displayName: displayName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(displayName),
+      blockedAt: Value(blockedAt),
+      auto: Value(auto),
+    );
+  }
+
+  factory BlockedRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BlockedRow(
+      nodeId: serializer.fromJson<String>(json['nodeId']),
+      displayName: serializer.fromJson<String?>(json['displayName']),
+      blockedAt: serializer.fromJson<int>(json['blockedAt']),
+      auto: serializer.fromJson<bool>(json['auto']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'nodeId': serializer.toJson<String>(nodeId),
+      'displayName': serializer.toJson<String?>(displayName),
+      'blockedAt': serializer.toJson<int>(blockedAt),
+      'auto': serializer.toJson<bool>(auto),
+    };
+  }
+
+  BlockedRow copyWith({
+    String? nodeId,
+    Value<String?> displayName = const Value.absent(),
+    int? blockedAt,
+    bool? auto,
+  }) => BlockedRow(
+    nodeId: nodeId ?? this.nodeId,
+    displayName: displayName.present ? displayName.value : this.displayName,
+    blockedAt: blockedAt ?? this.blockedAt,
+    auto: auto ?? this.auto,
+  );
+  BlockedRow copyWithCompanion(BlockedNodesCompanion data) {
+    return BlockedRow(
+      nodeId: data.nodeId.present ? data.nodeId.value : this.nodeId,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      blockedAt: data.blockedAt.present ? data.blockedAt.value : this.blockedAt,
+      auto: data.auto.present ? data.auto.value : this.auto,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlockedRow(')
+          ..write('nodeId: $nodeId, ')
+          ..write('displayName: $displayName, ')
+          ..write('blockedAt: $blockedAt, ')
+          ..write('auto: $auto')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(nodeId, displayName, blockedAt, auto);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BlockedRow &&
+          other.nodeId == this.nodeId &&
+          other.displayName == this.displayName &&
+          other.blockedAt == this.blockedAt &&
+          other.auto == this.auto);
+}
+
+class BlockedNodesCompanion extends UpdateCompanion<BlockedRow> {
+  final Value<String> nodeId;
+  final Value<String?> displayName;
+  final Value<int> blockedAt;
+  final Value<bool> auto;
+  final Value<int> rowid;
+  const BlockedNodesCompanion({
+    this.nodeId = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.blockedAt = const Value.absent(),
+    this.auto = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BlockedNodesCompanion.insert({
+    required String nodeId,
+    this.displayName = const Value.absent(),
+    required int blockedAt,
+    this.auto = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : nodeId = Value(nodeId),
+       blockedAt = Value(blockedAt);
+  static Insertable<BlockedRow> custom({
+    Expression<String>? nodeId,
+    Expression<String>? displayName,
+    Expression<int>? blockedAt,
+    Expression<bool>? auto,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (nodeId != null) 'node_id': nodeId,
+      if (displayName != null) 'display_name': displayName,
+      if (blockedAt != null) 'blocked_at': blockedAt,
+      if (auto != null) 'auto': auto,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BlockedNodesCompanion copyWith({
+    Value<String>? nodeId,
+    Value<String?>? displayName,
+    Value<int>? blockedAt,
+    Value<bool>? auto,
+    Value<int>? rowid,
+  }) {
+    return BlockedNodesCompanion(
+      nodeId: nodeId ?? this.nodeId,
+      displayName: displayName ?? this.displayName,
+      blockedAt: blockedAt ?? this.blockedAt,
+      auto: auto ?? this.auto,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (nodeId.present) {
+      map['node_id'] = Variable<String>(nodeId.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (blockedAt.present) {
+      map['blocked_at'] = Variable<int>(blockedAt.value);
+    }
+    if (auto.present) {
+      map['auto'] = Variable<bool>(auto.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlockedNodesCompanion(')
+          ..write('nodeId: $nodeId, ')
+          ..write('displayName: $displayName, ')
+          ..write('blockedAt: $blockedAt, ')
+          ..write('auto: $auto, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BlockVotesTable extends BlockVotes
+    with TableInfo<$BlockVotesTable, BlockVoteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BlockVotesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _targetNodeIdMeta = const VerificationMeta(
+    'targetNodeId',
+  );
+  @override
+  late final GeneratedColumn<String> targetNodeId = GeneratedColumn<String>(
+    'target_node_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _voterNodeIdMeta = const VerificationMeta(
+    'voterNodeId',
+  );
+  @override
+  late final GeneratedColumn<String> voterNodeId = GeneratedColumn<String>(
+    'voter_node_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta(
+    'receivedAt',
+  );
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+    'received_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [targetNodeId, voterNodeId, receivedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'block_votes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BlockVoteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('target_node_id')) {
+      context.handle(
+        _targetNodeIdMeta,
+        targetNodeId.isAcceptableOrUnknown(
+          data['target_node_id']!,
+          _targetNodeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetNodeIdMeta);
+    }
+    if (data.containsKey('voter_node_id')) {
+      context.handle(
+        _voterNodeIdMeta,
+        voterNodeId.isAcceptableOrUnknown(
+          data['voter_node_id']!,
+          _voterNodeIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_voterNodeIdMeta);
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+        _receivedAtMeta,
+        receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_receivedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {targetNodeId, voterNodeId};
+  @override
+  BlockVoteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BlockVoteRow(
+      targetNodeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_node_id'],
+      )!,
+      voterNodeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}voter_node_id'],
+      )!,
+      receivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BlockVotesTable createAlias(String alias) {
+    return $BlockVotesTable(attachedDatabase, alias);
+  }
+}
+
+class BlockVoteRow extends DataClass implements Insertable<BlockVoteRow> {
+  final String targetNodeId;
+  final String voterNodeId;
+  final int receivedAt;
+  const BlockVoteRow({
+    required this.targetNodeId,
+    required this.voterNodeId,
+    required this.receivedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['target_node_id'] = Variable<String>(targetNodeId);
+    map['voter_node_id'] = Variable<String>(voterNodeId);
+    map['received_at'] = Variable<int>(receivedAt);
+    return map;
+  }
+
+  BlockVotesCompanion toCompanion(bool nullToAbsent) {
+    return BlockVotesCompanion(
+      targetNodeId: Value(targetNodeId),
+      voterNodeId: Value(voterNodeId),
+      receivedAt: Value(receivedAt),
+    );
+  }
+
+  factory BlockVoteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BlockVoteRow(
+      targetNodeId: serializer.fromJson<String>(json['targetNodeId']),
+      voterNodeId: serializer.fromJson<String>(json['voterNodeId']),
+      receivedAt: serializer.fromJson<int>(json['receivedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'targetNodeId': serializer.toJson<String>(targetNodeId),
+      'voterNodeId': serializer.toJson<String>(voterNodeId),
+      'receivedAt': serializer.toJson<int>(receivedAt),
+    };
+  }
+
+  BlockVoteRow copyWith({
+    String? targetNodeId,
+    String? voterNodeId,
+    int? receivedAt,
+  }) => BlockVoteRow(
+    targetNodeId: targetNodeId ?? this.targetNodeId,
+    voterNodeId: voterNodeId ?? this.voterNodeId,
+    receivedAt: receivedAt ?? this.receivedAt,
+  );
+  BlockVoteRow copyWithCompanion(BlockVotesCompanion data) {
+    return BlockVoteRow(
+      targetNodeId: data.targetNodeId.present
+          ? data.targetNodeId.value
+          : this.targetNodeId,
+      voterNodeId: data.voterNodeId.present
+          ? data.voterNodeId.value
+          : this.voterNodeId,
+      receivedAt: data.receivedAt.present
+          ? data.receivedAt.value
+          : this.receivedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlockVoteRow(')
+          ..write('targetNodeId: $targetNodeId, ')
+          ..write('voterNodeId: $voterNodeId, ')
+          ..write('receivedAt: $receivedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(targetNodeId, voterNodeId, receivedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BlockVoteRow &&
+          other.targetNodeId == this.targetNodeId &&
+          other.voterNodeId == this.voterNodeId &&
+          other.receivedAt == this.receivedAt);
+}
+
+class BlockVotesCompanion extends UpdateCompanion<BlockVoteRow> {
+  final Value<String> targetNodeId;
+  final Value<String> voterNodeId;
+  final Value<int> receivedAt;
+  final Value<int> rowid;
+  const BlockVotesCompanion({
+    this.targetNodeId = const Value.absent(),
+    this.voterNodeId = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BlockVotesCompanion.insert({
+    required String targetNodeId,
+    required String voterNodeId,
+    required int receivedAt,
+    this.rowid = const Value.absent(),
+  }) : targetNodeId = Value(targetNodeId),
+       voterNodeId = Value(voterNodeId),
+       receivedAt = Value(receivedAt);
+  static Insertable<BlockVoteRow> custom({
+    Expression<String>? targetNodeId,
+    Expression<String>? voterNodeId,
+    Expression<int>? receivedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (targetNodeId != null) 'target_node_id': targetNodeId,
+      if (voterNodeId != null) 'voter_node_id': voterNodeId,
+      if (receivedAt != null) 'received_at': receivedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BlockVotesCompanion copyWith({
+    Value<String>? targetNodeId,
+    Value<String>? voterNodeId,
+    Value<int>? receivedAt,
+    Value<int>? rowid,
+  }) {
+    return BlockVotesCompanion(
+      targetNodeId: targetNodeId ?? this.targetNodeId,
+      voterNodeId: voterNodeId ?? this.voterNodeId,
+      receivedAt: receivedAt ?? this.receivedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (targetNodeId.present) {
+      map['target_node_id'] = Variable<String>(targetNodeId.value);
+    }
+    if (voterNodeId.present) {
+      map['voter_node_id'] = Variable<String>(voterNodeId.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BlockVotesCompanion(')
+          ..write('targetNodeId: $targetNodeId, ')
+          ..write('voterNodeId: $voterNodeId, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SettingsTable extends Settings
     with TableInfo<$SettingsTable, SettingRow> {
   @override
@@ -4248,6 +4901,8 @@ abstract class _$MessyDatabase extends GeneratedDatabase {
   late final $GroupsTable groups = $GroupsTable(this);
   late final $OwnPrekeysTable ownPrekeys = $OwnPrekeysTable(this);
   late final $PeerPrekeysTable peerPrekeys = $PeerPrekeysTable(this);
+  late final $BlockedNodesTable blockedNodes = $BlockedNodesTable(this);
+  late final $BlockVotesTable blockVotes = $BlockVotesTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -4264,6 +4919,8 @@ abstract class _$MessyDatabase extends GeneratedDatabase {
     groups,
     ownPrekeys,
     peerPrekeys,
+    blockedNodes,
+    blockVotes,
     settings,
   ];
 }
@@ -5015,6 +5672,7 @@ typedef $$MediaItemsTableCreateCompanionBuilder =
       required int chunkTotal,
       required Uint8List sha256,
       Value<bool> complete,
+      Value<bool> awaitingConsent,
       Value<int> rowid,
     });
 typedef $$MediaItemsTableUpdateCompanionBuilder =
@@ -5027,6 +5685,7 @@ typedef $$MediaItemsTableUpdateCompanionBuilder =
       Value<int> chunkTotal,
       Value<Uint8List> sha256,
       Value<bool> complete,
+      Value<bool> awaitingConsent,
       Value<int> rowid,
     });
 
@@ -5076,6 +5735,11 @@ class $$MediaItemsTableFilterComposer
 
   ColumnFilters<bool> get complete => $composableBuilder(
     column: $table.complete,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get awaitingConsent => $composableBuilder(
+    column: $table.awaitingConsent,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5128,6 +5792,11 @@ class $$MediaItemsTableOrderingComposer
     column: $table.complete,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get awaitingConsent => $composableBuilder(
+    column: $table.awaitingConsent,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MediaItemsTableAnnotationComposer
@@ -5164,6 +5833,11 @@ class $$MediaItemsTableAnnotationComposer
 
   GeneratedColumn<bool> get complete =>
       $composableBuilder(column: $table.complete, builder: (column) => column);
+
+  GeneratedColumn<bool> get awaitingConsent => $composableBuilder(
+    column: $table.awaitingConsent,
+    builder: (column) => column,
+  );
 }
 
 class $$MediaItemsTableTableManager
@@ -5205,6 +5879,7 @@ class $$MediaItemsTableTableManager
                 Value<int> chunkTotal = const Value.absent(),
                 Value<Uint8List> sha256 = const Value.absent(),
                 Value<bool> complete = const Value.absent(),
+                Value<bool> awaitingConsent = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MediaItemsCompanion(
                 mediaId: mediaId,
@@ -5215,6 +5890,7 @@ class $$MediaItemsTableTableManager
                 chunkTotal: chunkTotal,
                 sha256: sha256,
                 complete: complete,
+                awaitingConsent: awaitingConsent,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5227,6 +5903,7 @@ class $$MediaItemsTableTableManager
                 required int chunkTotal,
                 required Uint8List sha256,
                 Value<bool> complete = const Value.absent(),
+                Value<bool> awaitingConsent = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MediaItemsCompanion.insert(
                 mediaId: mediaId,
@@ -5237,6 +5914,7 @@ class $$MediaItemsTableTableManager
                 chunkTotal: chunkTotal,
                 sha256: sha256,
                 complete: complete,
+                awaitingConsent: awaitingConsent,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6404,6 +7082,357 @@ typedef $$PeerPrekeysTableProcessedTableManager =
       PeerPrekeyRow,
       PrefetchHooks Function()
     >;
+typedef $$BlockedNodesTableCreateCompanionBuilder =
+    BlockedNodesCompanion Function({
+      required String nodeId,
+      Value<String?> displayName,
+      required int blockedAt,
+      Value<bool> auto,
+      Value<int> rowid,
+    });
+typedef $$BlockedNodesTableUpdateCompanionBuilder =
+    BlockedNodesCompanion Function({
+      Value<String> nodeId,
+      Value<String?> displayName,
+      Value<int> blockedAt,
+      Value<bool> auto,
+      Value<int> rowid,
+    });
+
+class $$BlockedNodesTableFilterComposer
+    extends Composer<_$MessyDatabase, $BlockedNodesTable> {
+  $$BlockedNodesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get nodeId => $composableBuilder(
+    column: $table.nodeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get blockedAt => $composableBuilder(
+    column: $table.blockedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get auto => $composableBuilder(
+    column: $table.auto,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BlockedNodesTableOrderingComposer
+    extends Composer<_$MessyDatabase, $BlockedNodesTable> {
+  $$BlockedNodesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get nodeId => $composableBuilder(
+    column: $table.nodeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get blockedAt => $composableBuilder(
+    column: $table.blockedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get auto => $composableBuilder(
+    column: $table.auto,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BlockedNodesTableAnnotationComposer
+    extends Composer<_$MessyDatabase, $BlockedNodesTable> {
+  $$BlockedNodesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get nodeId =>
+      $composableBuilder(column: $table.nodeId, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get blockedAt =>
+      $composableBuilder(column: $table.blockedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get auto =>
+      $composableBuilder(column: $table.auto, builder: (column) => column);
+}
+
+class $$BlockedNodesTableTableManager
+    extends
+        RootTableManager<
+          _$MessyDatabase,
+          $BlockedNodesTable,
+          BlockedRow,
+          $$BlockedNodesTableFilterComposer,
+          $$BlockedNodesTableOrderingComposer,
+          $$BlockedNodesTableAnnotationComposer,
+          $$BlockedNodesTableCreateCompanionBuilder,
+          $$BlockedNodesTableUpdateCompanionBuilder,
+          (
+            BlockedRow,
+            BaseReferences<_$MessyDatabase, $BlockedNodesTable, BlockedRow>,
+          ),
+          BlockedRow,
+          PrefetchHooks Function()
+        > {
+  $$BlockedNodesTableTableManager(_$MessyDatabase db, $BlockedNodesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BlockedNodesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BlockedNodesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BlockedNodesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> nodeId = const Value.absent(),
+                Value<String?> displayName = const Value.absent(),
+                Value<int> blockedAt = const Value.absent(),
+                Value<bool> auto = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BlockedNodesCompanion(
+                nodeId: nodeId,
+                displayName: displayName,
+                blockedAt: blockedAt,
+                auto: auto,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String nodeId,
+                Value<String?> displayName = const Value.absent(),
+                required int blockedAt,
+                Value<bool> auto = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BlockedNodesCompanion.insert(
+                nodeId: nodeId,
+                displayName: displayName,
+                blockedAt: blockedAt,
+                auto: auto,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BlockedNodesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$MessyDatabase,
+      $BlockedNodesTable,
+      BlockedRow,
+      $$BlockedNodesTableFilterComposer,
+      $$BlockedNodesTableOrderingComposer,
+      $$BlockedNodesTableAnnotationComposer,
+      $$BlockedNodesTableCreateCompanionBuilder,
+      $$BlockedNodesTableUpdateCompanionBuilder,
+      (
+        BlockedRow,
+        BaseReferences<_$MessyDatabase, $BlockedNodesTable, BlockedRow>,
+      ),
+      BlockedRow,
+      PrefetchHooks Function()
+    >;
+typedef $$BlockVotesTableCreateCompanionBuilder =
+    BlockVotesCompanion Function({
+      required String targetNodeId,
+      required String voterNodeId,
+      required int receivedAt,
+      Value<int> rowid,
+    });
+typedef $$BlockVotesTableUpdateCompanionBuilder =
+    BlockVotesCompanion Function({
+      Value<String> targetNodeId,
+      Value<String> voterNodeId,
+      Value<int> receivedAt,
+      Value<int> rowid,
+    });
+
+class $$BlockVotesTableFilterComposer
+    extends Composer<_$MessyDatabase, $BlockVotesTable> {
+  $$BlockVotesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get targetNodeId => $composableBuilder(
+    column: $table.targetNodeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get voterNodeId => $composableBuilder(
+    column: $table.voterNodeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BlockVotesTableOrderingComposer
+    extends Composer<_$MessyDatabase, $BlockVotesTable> {
+  $$BlockVotesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get targetNodeId => $composableBuilder(
+    column: $table.targetNodeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get voterNodeId => $composableBuilder(
+    column: $table.voterNodeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BlockVotesTableAnnotationComposer
+    extends Composer<_$MessyDatabase, $BlockVotesTable> {
+  $$BlockVotesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get targetNodeId => $composableBuilder(
+    column: $table.targetNodeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get voterNodeId => $composableBuilder(
+    column: $table.voterNodeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$BlockVotesTableTableManager
+    extends
+        RootTableManager<
+          _$MessyDatabase,
+          $BlockVotesTable,
+          BlockVoteRow,
+          $$BlockVotesTableFilterComposer,
+          $$BlockVotesTableOrderingComposer,
+          $$BlockVotesTableAnnotationComposer,
+          $$BlockVotesTableCreateCompanionBuilder,
+          $$BlockVotesTableUpdateCompanionBuilder,
+          (
+            BlockVoteRow,
+            BaseReferences<_$MessyDatabase, $BlockVotesTable, BlockVoteRow>,
+          ),
+          BlockVoteRow,
+          PrefetchHooks Function()
+        > {
+  $$BlockVotesTableTableManager(_$MessyDatabase db, $BlockVotesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BlockVotesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BlockVotesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BlockVotesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> targetNodeId = const Value.absent(),
+                Value<String> voterNodeId = const Value.absent(),
+                Value<int> receivedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BlockVotesCompanion(
+                targetNodeId: targetNodeId,
+                voterNodeId: voterNodeId,
+                receivedAt: receivedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String targetNodeId,
+                required String voterNodeId,
+                required int receivedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => BlockVotesCompanion.insert(
+                targetNodeId: targetNodeId,
+                voterNodeId: voterNodeId,
+                receivedAt: receivedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BlockVotesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$MessyDatabase,
+      $BlockVotesTable,
+      BlockVoteRow,
+      $$BlockVotesTableFilterComposer,
+      $$BlockVotesTableOrderingComposer,
+      $$BlockVotesTableAnnotationComposer,
+      $$BlockVotesTableCreateCompanionBuilder,
+      $$BlockVotesTableUpdateCompanionBuilder,
+      (
+        BlockVoteRow,
+        BaseReferences<_$MessyDatabase, $BlockVotesTable, BlockVoteRow>,
+      ),
+      BlockVoteRow,
+      PrefetchHooks Function()
+    >;
 typedef $$SettingsTableCreateCompanionBuilder =
     SettingsCompanion Function({
       required String key,
@@ -6564,6 +7593,10 @@ class $MessyDatabaseManager {
       $$OwnPrekeysTableTableManager(_db, _db.ownPrekeys);
   $$PeerPrekeysTableTableManager get peerPrekeys =>
       $$PeerPrekeysTableTableManager(_db, _db.peerPrekeys);
+  $$BlockedNodesTableTableManager get blockedNodes =>
+      $$BlockedNodesTableTableManager(_db, _db.blockedNodes);
+  $$BlockVotesTableTableManager get blockVotes =>
+      $$BlockVotesTableTableManager(_db, _db.blockVotes);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
 }

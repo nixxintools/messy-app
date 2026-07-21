@@ -88,6 +88,30 @@ class WipeService {
     }
   }
 
+  /// Deletes one message (and its media, if any) by id — used by the
+  /// long-press "delete message" action.
+  Future<void> deleteMessageById(String messageId) async {
+    final msg = await (db.select(db.messages)
+          ..where((m) => m.messageId.equals(messageId)))
+        .getSingleOrNull();
+    if (msg != null) await _deleteMessage(msg);
+  }
+
+  /// Deletes a media item everywhere (file, chunks, and its message) — the
+  /// gallery "delete" action.
+  Future<void> deleteMediaById(String mediaId) async {
+    final media = await (db.select(db.mediaItems)
+          ..where((m) => m.mediaId.equals(mediaId)))
+        .getSingleOrNull();
+    await mediaStore.delete(media?.filePath);
+    await (db.delete(db.mediaItems)..where((m) => m.mediaId.equals(mediaId)))
+        .go();
+    await (db.delete(db.mediaChunks)..where((c) => c.mediaId.equals(mediaId)))
+        .go();
+    await (db.delete(db.messages)..where((m) => m.mediaId.equals(mediaId)))
+        .go();
+  }
+
   Future<void> _deleteMessage(MessageRow msg) async {
     final mediaId = msg.mediaId;
     if (mediaId != null) {

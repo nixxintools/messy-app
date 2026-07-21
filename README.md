@@ -81,6 +81,9 @@ Working (Android), v2:
 - ✅ Disappearing messages + 24 h auto-wipe (on by default)
 - ✅ Background mesh: foreground service keeps receiving/relaying with the screen off
 - ✅ Forward secrecy for 1:1 texts via one-time prekeys — issued per peer, replenished in-band, burned after use (see [SECURITY.md](docs/SECURITY.md))
+- ✅ Authenticated public/group posts (Ed25519) — no impersonating a contact in Local
+- ✅ Moderation: block/mute a sender (hides, purges, stops relaying them), per-sender relay rate limiting, and web-of-trust blocklists shared among verified contacts
+- ✅ No auto-download in the public Media channel — tap-to-view placeholder for unverified media; delete any received media
 - ⏳ Roadmap: programmatic Wi-Fi Direct group formation, Bluetooth LE transport (for phones with Wi-Fi off), opportunistic internet P2P (WebRTC, serverless), post-compromise security (ratcheting), FS for media via per-transfer keys
 
 ## Build & run

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/mesh/mesh_foreground.dart';
 import '../../providers/providers.dart';
 import '../home_shell.dart';
+import 'blocked_screen.dart';
 
 /// Wireframe screen 7.
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -146,6 +147,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     await core.wipe.setAutoWipe(v);
                     setState(() => _autoWipe = v);
                   },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.block),
+                  title: const Text('Blocked people'),
+                  subtitle: const Text('View and unblock muted senders'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const BlockedScreen()),
+                  ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.badge_outlined),

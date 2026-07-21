@@ -45,9 +45,23 @@ Intermediate mesh hops store and forward **ciphertext only**. They can observe: 
 | QR scan | **verified** | Keys exchanged by physical presence — a trusted channel. |
 | Nearby request/accept | **unverified** | Keys exchanged over the air; a MITM on first contact is theoretically possible. The UI shows a **6-word fingerprint phrase** (derived from SHA-256 over both public keys, sorted) that both users can compare out-of-band, plus a nudge to re-verify via QR. |
 
-## 4. Public chatroom — explicitly not secret
+## 4. Public channels — not secret, but authenticated and moderated
 
-The "Local" room is encrypted with a key derived from the room name (`HKDF("messy-public-room" ‖ name)`). Every copy of Messy can derive this key. This keeps the wire format uniform and keeps casual packet sniffers out, but it is **obfuscation, not confidentiality**: treat anything posted to the public room as public speech. Posts are Ed25519-signed, so display names cannot be forged for a given nodeId, but nothing stops a user from choosing any display name they like. Public posts expire everywhere after 24 h.
+The "Local" room and the public "Media" channel are encrypted with a key derived from a public constant. Every copy of Messy can derive this key, so this is **obfuscation, not confidentiality**: treat anything posted there as public speech. Posts expire everywhere after 24 h.
+
+**Sender authentication.** Because the channel key is shared, the `senderPub` field alone proves nothing — anyone could set it. So every public/group post is **Ed25519-signed** over `messageId ‖ senderPub ‖ timestamp ‖ payloadType ‖ content`, and the receiver rejects any post whose signature doesn't verify. If the sender key matches a **known contact** whose signing key we hold, the post must be signed by exactly that key — so a stranger cannot impersonate a saved contact. (An attacker can still mint a fresh anonymous identity per post; that's inherent to a registration-free network, and is what the moderation layer in §9 addresses.) Group media chunks carry no separate signature — their integrity comes from the SHA-256 in the signed manifest, so a forged chunk fails reassembly.
+
+**No auto-download in the public Media channel.** Public media is never fetched to disk or shown automatically. The manifest arrives, chunks are held encrypted-at-rest in the app database (never materialized as a gallery file), and the image/video is only assembled and displayed when the user explicitly taps "download & view" on a placeholder marked *unverified sender*. This stops drive-by illegal content from silently landing in a user's gallery or being auto-redistributed. Media inside 1:1 chats and invite-only groups (consensual, bounded audiences) still auto-downloads.
+
+## 9. Moderation on a serverless mesh
+
+A serverless anonymous channel has no gatekeeper — you cannot *prevent* someone posting. Every defense is therefore client-side, and Messy layers several:
+
+- **Block ("block for me").** Blocking a node hides its messages, **purges** everything it sent that you stored, and makes your device **stop relaying its posts** — so a spammer loses reach through everyone who blocks them. It cannot stop them transmitting to others.
+- **Relay rate limiting.** A per-sender token bucket caps how much any one node can push through your device, so a flooder can't fill relay budgets, drain batteries, or drown out Local.
+- **Web-of-trust blocklists.** When you block someone, a **signed** block record is shared with your *verified* contacts on connection. If several verified contacts have each blocked the same node, you auto-mute it too. Only manually-created blocks are shared (never auto-blocks, to prevent cascades), and only **verified** contacts get a vote (an unverified/sybil identity cannot manufacture auto-blocks).
+
+This is the ceiling of what a serverless design allows: abuse becomes low-reach, non-persistent, and attributable — but not impossible. Users should understand that public channels are open-broadcast spaces.
 
 ## 5. App access: PIN gate
 

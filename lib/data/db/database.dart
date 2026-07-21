@@ -61,6 +61,10 @@ class MediaItems extends Table {
   IntColumn get chunkTotal => integer()();
   BlobColumn get sha256 => blob()();
   BoolColumn get complete => boolean().withDefault(const Constant(false))();
+  // Public Media channel items wait for an explicit "view" tap before their
+  // chunks are fetched and written to disk (no auto-download).
+  BoolColumn get awaitingConsent =>
+      boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column> get primaryKey => {mediaId};
@@ -142,6 +146,32 @@ class PeerPrekeys extends Table {
   Set<Column> get primaryKey => {nodeId, keyId};
 }
 
+/// Nodes the user has muted. Blocking on a mesh is "block for me": their
+/// messages are hidden and purged, and we stop relaying their public posts.
+@DataClassName('BlockedRow')
+class BlockedNodes extends Table {
+  TextColumn get nodeId => text()();
+  TextColumn get displayName => text().nullable()();
+  IntColumn get blockedAt => integer()();
+  // Auto-blocked via web-of-trust (contacts' blocklists) vs. blocked by hand.
+  BoolColumn get auto => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {nodeId};
+}
+
+/// Signed "I blocked node X" records from contacts (web-of-trust). When
+/// enough trusted contacts have blocked a node, we auto-mute it too.
+@DataClassName('BlockVoteRow')
+class BlockVotes extends Table {
+  TextColumn get targetNodeId => text()(); // who was blocked
+  TextColumn get voterNodeId => text()(); // which contact blocked them
+  IntColumn get receivedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {targetNodeId, voterNodeId};
+}
+
 @DataClassName('SettingRow')
 class Settings extends Table {
   TextColumn get key => text()();
@@ -163,6 +193,8 @@ class Settings extends Table {
     Groups,
     OwnPrekeys,
     PeerPrekeys,
+    BlockedNodes,
+    BlockVotes,
     Settings,
   ],
 )
@@ -172,7 +204,7 @@ class MessyDatabase extends _$MessyDatabase {
   MessyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -183,6 +215,11 @@ class MessyDatabase extends _$MessyDatabase {
           if (from < 3) {
             await m.createTable(ownPrekeys);
             await m.createTable(peerPrekeys);
+          }
+          if (from < 4) {
+            await m.createTable(blockedNodes);
+            await m.createTable(blockVotes);
+            await m.addColumn(mediaItems, mediaItems.awaitingConsent);
           }
         },
         beforeOpen: (details) async {

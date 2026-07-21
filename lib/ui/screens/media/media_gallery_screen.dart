@@ -52,7 +52,7 @@ class MediaGalleryScreen extends ConsumerWidget {
   }
 }
 
-class _MediaTile extends StatelessWidget {
+class _MediaTile extends ConsumerWidget {
   const _MediaTile({required this.item});
 
   final MediaRow item;
@@ -60,10 +60,11 @@ class _MediaTile extends StatelessWidget {
   bool get _isImage => item.mimeType.startsWith('image/');
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: () => _open(context),
+      onLongPress: () => _confirmDelete(context, ref),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: _isImage
@@ -84,6 +85,30 @@ class _MediaTile extends StatelessWidget {
               ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.delete_outline,
+                  color: Theme.of(context).colorScheme.error),
+              title: const Text('Delete this media'),
+              subtitle: const Text('Removes it from this device'),
+              onTap: () => Navigator.of(sheetContext).pop(true),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      final core = await ref.read(coreProvider.future);
+      await core.wipe.deleteMediaById(item.mediaId);
+    }
   }
 
   void _open(BuildContext context) {

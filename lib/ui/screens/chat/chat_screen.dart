@@ -196,7 +196,9 @@ class _MessageBubble extends ConsumerWidget {
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
+      child: GestureDetector(
+        onLongPress: () => _showActions(context, ref, mine),
+        child: Container(
         margin: const EdgeInsets.symmetric(vertical: 3),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         constraints: BoxConstraints(
@@ -238,6 +240,51 @@ class _MessageBubble extends ConsumerWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  void _showActions(BuildContext context, WidgetRef ref, bool mine) {
+    final senderNode = row.senderNodeId;
+    final senderName = row.senderName ?? senderNode?.substring(0, 8) ?? 'sender';
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Delete for me'),
+              onTap: () async {
+                Navigator.of(sheetContext).pop();
+                final core = await ref.read(coreProvider.future);
+                await core.wipe.deleteMessageById(row.messageId);
+              },
+            ),
+            if (!mine && senderNode != null)
+              ListTile(
+                leading: const Icon(Icons.block),
+                title: Text('Block $senderName'),
+                subtitle: const Text(
+                  'Hides them, purges their messages, stops relaying their '
+                  'posts, and warns your verified contacts',
+                ),
+                onTap: () async {
+                  Navigator.of(sheetContext).pop();
+                  final core = await ref.read(coreProvider.future);
+                  await core.blocks
+                      .block(senderNode, displayName: row.senderName);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Blocked $senderName')),
+                    );
+                  }
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -263,6 +310,44 @@ class _MediaContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final media = ref.watch(mediaProvider(mediaId)).valueOrNull;
+    // Public Media channel: never auto-downloaded. Show a guarded placeholder
+    // until the user explicitly taps to fetch it.
+    if (media != null && media.awaitingConsent) {
+      final mb = (media.totalSize / (1024 * 1024)).toStringAsFixed(1);
+      return InkWell(
+        onTap: () async {
+          final core = await ref.read(coreProvider.future);
+          await core.router.downloadGatedMedia(mediaId);
+        },
+        child: Container(
+          width: 220,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.visibility_off_outlined, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                media.mimeType.startsWith('video/')
+                    ? 'Video · $mb MB'
+                    : 'Photo · $mb MB',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'From an unverified sender.\nTap to download & view.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (media == null || !media.complete || media.filePath == null) {
       return const Padding(
         padding: EdgeInsets.all(8),

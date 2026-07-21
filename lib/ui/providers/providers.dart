@@ -5,6 +5,7 @@ import '../../services/notifications/notification_service.dart';
 import '../../data/db/database.dart';
 import '../../services/chat/chat_service.dart';
 import '../../services/contacts/contact_service.dart';
+import '../../services/moderation/block_service.dart';
 import '../../services/crypto/identity_service.dart';
 import '../../services/crypto/prekey_service.dart';
 import '../../services/crypto/session_crypto.dart';
@@ -29,6 +30,7 @@ class MessyCore {
     required this.contacts,
     required this.transfer,
     required this.wipe,
+    required this.blocks,
   });
 
   final MessyDatabase db;
@@ -41,6 +43,7 @@ class MessyCore {
   final ContactService contacts;
   final TransferService transfer;
   final WipeService wipe;
+  final BlockService blocks;
 
   static Future<MessyCore> boot() async {
     final identityService = IdentityService();
@@ -50,6 +53,7 @@ class MessyCore {
     final mediaStore = MediaStore();
     final prekeys = PrekeyService(db: db);
     await prekeys.ensurePool();
+    final blocks = BlockService(db: db);
     final connectivity = ConnectivityManager(
       identity: identity,
       identityService: identityService,
@@ -60,6 +64,7 @@ class MessyCore {
       identityService: identityService,
       crypto: crypto,
       prekeys: prekeys,
+      blocks: blocks,
       connectivity: connectivity,
       mediaStore: mediaStore,
     );
@@ -90,6 +95,7 @@ class MessyCore {
         mediaStore: mediaStore,
       ),
       wipe: WipeService(db: db, mediaStore: mediaStore),
+      blocks: blocks,
     );
     router.start();
     core.wipe.start();
@@ -169,6 +175,11 @@ final groupsProvider = StreamProvider((ref) async* {
 final mediaGalleryProvider = StreamProvider((ref) async* {
   final core = await ref.watch(coreProvider.future);
   yield* core.db.select(core.db.mediaItems).watch();
+});
+
+final blockedProvider = StreamProvider((ref) async* {
+  final core = await ref.watch(coreProvider.future);
+  yield* core.blocks.watchBlocked();
 });
 
 final mediaProvider = StreamProvider.family((ref, String mediaId) async* {

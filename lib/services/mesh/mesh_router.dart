@@ -16,7 +16,9 @@ import '../../transport/connectivity_manager.dart';
 import '../../core/well_known.dart';
 import '../crypto/identity_service.dart';
 import '../crypto/prekey_service.dart';
+import '../crypto/public_auth.dart';
 import '../crypto/session_crypto.dart';
+import '../moderation/block_service.dart';
 import '../transfer/media_store.dart';
 
 /// Store-and-forward mesh routing — docs/ARCHITECTURE.md §4.
@@ -31,6 +33,7 @@ class MeshRouter {
     required this.identityService,
     required this.crypto,
     required this.prekeys,
+    required this.blocks,
     required this.connectivity,
     required this.mediaStore,
   });
@@ -42,10 +45,34 @@ class MeshRouter {
   final IdentityService identityService;
   final SessionCrypto crypto;
   final PrekeyService prekeys;
+  final BlockService blocks;
   final ConnectivityManager connectivity;
   final MediaStore mediaStore;
 
   final _uuid = const Uuid();
+
+  /// Per-sender relay token bucket (anti-flood). A node may relay up to
+  /// [_relayBurst] frames through us, refilling at [_relayPerSec]/sec; over
+  /// that, we drop rather than store-and-forward.
+  static const _relayBurst = 40;
+  static const _relayPerSec = 2.0;
+  final Map<String, ({double tokens, int atMs})> _relayBuckets = {};
+
+  bool _allowRelay(String senderNode) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final b = _relayBuckets[senderNode];
+    var tokens = _relayBurst.toDouble();
+    if (b != null) {
+      tokens = (b.tokens + (now - b.atMs) / 1000.0 * _relayPerSec)
+          .clamp(0, _relayBurst.toDouble());
+    }
+    if (tokens < 1) {
+      _relayBuckets[senderNode] = (tokens: tokens, atMs: now);
+      return false;
+    }
+    _relayBuckets[senderNode] = (tokens: tokens - 1, atMs: now);
+    return true;
+  }
 
   /// Contact request/accept frames are link-level, not envelopes — the
   /// contact service registers itself here.
@@ -64,8 +91,82 @@ class MeshRouter {
       // was delivered — no frames are lost in the link-up window.
       auth.setFrameHandler((frame) => _onFrame(auth, frame));
       _sendPrekeyBundle(auth);
+      _sendBlockList(auth);
       _syncTo(auth);
     });
+  }
+
+  static const _blockListContext = 'messy-blocklist';
+
+  static Uint8List _blockListSignedBytes(int ts, List<String> nodes) {
+    return concatBytes([
+      _blockListContext.codeUnits,
+      '$ts'.codeUnits,
+      for (final n in nodes) n.codeUnits,
+    ]);
+  }
+
+  /// Shares our manually-blocked nodes with a verified contact (web-of-trust).
+  /// Only manual blocks are shared — never auto-blocks — so a single node's
+  /// opinion can't cascade across the network.
+  Future<void> _sendBlockList(AuthenticatedLink auth) async {
+    try {
+      final contact = await (db.select(db.contacts)
+            ..where((c) => c.nodeId.equals(auth.nodeId)))
+          .getSingleOrNull();
+      if (contact == null || !contact.verified) return;
+      final rows = await (db.select(db.blockedNodes)
+            ..where((b) => b.auto.equals(false)))
+          .get();
+      if (rows.isEmpty) return;
+      final nodes = rows.map((r) => r.nodeId).toList();
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final sig = await identityService.sign(
+        identity,
+        _blockListSignedBytes(ts, nodes),
+      );
+      await auth.link.sendFrame(FrameCodec.encodeJson(Protocol.frameBlockList, {
+        'b': nodes,
+        'ts': ts,
+        'sig': b64u(sig),
+      }));
+    } on Object {
+      // Link died; re-shared on the next link-up.
+    }
+  }
+
+  Future<void> _onBlockList(
+    AuthenticatedLink from,
+    Map<String, Object?> body,
+  ) async {
+    try {
+      // A vote only counts from a contact WE have verified in person.
+      final contact = await (db.select(db.contacts)
+            ..where((c) => c.nodeId.equals(from.nodeId)))
+          .getSingleOrNull();
+      if (contact == null || !contact.verified) return;
+      final nodes = ((body['b'] as List?) ?? const [])
+          .whereType<String>()
+          .toList();
+      final ts = body['ts'] as int;
+      final sig = b64uDecode(body['sig'] as String);
+      final ok = await IdentityService.verify(
+        message: _blockListSignedBytes(ts, nodes),
+        signature: sig,
+        ed25519Pub: from.ed25519Pub,
+      );
+      if (!ok) return;
+      for (final target in nodes) {
+        if (target == identity.nodeId) continue; // never auto-block ourselves
+        await blocks.recordVote(
+          targetNodeId: target,
+          voterNodeId: from.nodeId,
+          voterVerified: true,
+        );
+      }
+    } on Object {
+      // Malformed — ignore.
+    }
   }
 
   /// Issues a batch of one-time prekeys to a freshly-linked peer, signed
@@ -214,26 +315,34 @@ class MeshRouter {
     return sealed.messageIdHex;
   }
 
-  /// Publishes to the public room. Payload is readable by any Messy install.
+  /// Publishes to the public room. Payload is readable by any Messy install,
+  /// but Ed25519-signed so the sender identity cannot be forged.
   Future<String> sendPublic(List<int> plaintext) async {
     final id = _newMessageId();
     final nonce = crypto.newNonce();
+    final ts = DateTime.now().millisecondsSinceEpoch;
     final env = Envelope(
       messageId: id,
       senderPub: identity.x25519Pub,
       recipientPub: Uint8List(32),
       ttl: Protocol.ttlPublic,
       hopCount: 0,
-      timestampMs: DateTime.now().millisecondsSinceEpoch,
+      timestampMs: ts,
       payloadType: Protocol.payloadPublicText,
       chunkIndex: 0,
       chunkTotal: 0,
       nonce: nonce,
       ciphertext: Uint8List(0),
     );
+    final signed = await _signBroadcast(
+      messageId: id,
+      timestampMs: ts,
+      payloadType: Protocol.payloadPublicText,
+      content: plaintext,
+    );
     final box = await crypto.sealPublic(
       roomName: publicRoomName,
-      plaintext: plaintext,
+      plaintext: signed,
       nonce: nonce,
       aad: EnvelopeCodec.aadOf(env),
     );
@@ -267,6 +376,7 @@ class MeshRouter {
   }) async {
     final id = messageId ?? _newMessageId();
     final nonce = crypto.newNonce();
+    final ts = DateTime.now().millisecondsSinceEpoch;
     final tag = sha256Bytes(group.key); // routing tag, one-way from the key
     final env = Envelope(
       messageId: id,
@@ -274,16 +384,28 @@ class MeshRouter {
       recipientPub: tag,
       ttl: Protocol.ttlDirect,
       hopCount: 0,
-      timestampMs: DateTime.now().millisecondsSinceEpoch,
+      timestampMs: ts,
       payloadType: payloadType,
       chunkIndex: chunkIndex,
       chunkTotal: chunkTotal,
       nonce: nonce,
       ciphertext: Uint8List(0),
     );
+    // Sign text and manifests; chunks inherit integrity from the manifest's
+    // SHA-256 over the whole file, so they carry no separate signature.
+    final signable = payloadType == Protocol.payloadGroupText ||
+        payloadType == Protocol.payloadMediaManifest;
+    final toSeal = signable
+        ? await _signBroadcast(
+            messageId: id,
+            timestampMs: ts,
+            payloadType: payloadType,
+            content: plaintext,
+          )
+        : plaintext;
     final box = await crypto.sealWithKey(
       keyBytes: group.key,
-      plaintext: plaintext,
+      plaintext: toSeal,
       nonce: nonce,
       aad: EnvelopeCodec.aadOf(env),
     );
@@ -367,6 +489,8 @@ class MeshRouter {
           onContactAccept?.call(from, FrameCodec.decodeJson(frame));
         case Protocol.framePrekeys:
           await _onPrekeyFrame(from, FrameCodec.decodeJson(frame));
+        case Protocol.frameBlockList:
+          await _onBlockList(from, FrameCodec.decodeJson(frame));
         default:
           break; // hello handled by ConnectivityManager; rest reserved
       }
@@ -431,6 +555,11 @@ class MeshRouter {
     required String recipientNodeId,
   }) async {
     if (env.ttl <= 1) return;
+    final senderNode = nodeIdOf(env.senderPub);
+    // Don't carry traffic from blocked senders — become a dead end.
+    if (await blocks.isBlocked(senderNode)) return;
+    // Anti-flood: cap how much any one sender can push through us.
+    if (!_allowRelay(senderNode)) return;
     final next = EnvelopeCodec.reencodeMutable(frame, env.ttl - 1, env.hopCount + 1);
     await db.into(db.relayStore).insertOnConflictUpdate(
           RelayStoreCompanion(
@@ -464,16 +593,73 @@ class MeshRouter {
     }
   }
 
+  /// Signs broadcast content — returns the bytes to seal with the shared key.
+  Future<Uint8List> _signBroadcast({
+    required Uint8List messageId,
+    required int timestampMs,
+    required int payloadType,
+    required List<int> content,
+  }) async {
+    final sig = await identityService.sign(
+      identity,
+      PublicAuth.signedBytes(
+        messageId: messageId,
+        senderPub: identity.x25519Pub,
+        timestampMs: timestampMs,
+        payloadType: payloadType,
+        content: content,
+      ),
+    );
+    return PublicAuth.wrap(
+      content: content,
+      ed25519Pub: identity.ed25519Pub,
+      signature: sig,
+    );
+  }
+
+  /// Verifies a signed broadcast post. Returns the inner content bytes, or
+  /// null if the signature is bad or it impersonates a known contact.
+  Future<List<int>?> _verifyBroadcast(Envelope env, List<int> sealedPlain) async {
+    final parsed = PublicAuth.parse(sealedPlain);
+    if (parsed == null) return null;
+    final ok = await IdentityService.verify(
+      message: PublicAuth.signedBytes(
+        messageId: env.messageId,
+        senderPub: env.senderPub,
+        timestampMs: env.timestampMs,
+        payloadType: env.payloadType,
+        content: parsed.post.content,
+      ),
+      signature: parsed.signature,
+      ed25519Pub: parsed.post.ed25519Pub,
+    );
+    if (!ok) return null;
+    // Impersonation guard: if this sender key belongs to a known contact
+    // whose signing key we actually hold, the post MUST be signed by it.
+    final contact = await (db.select(db.contacts)
+          ..where((c) => c.x25519Pub.equals(Uint8List.fromList(env.senderPub))))
+        .getSingleOrNull();
+    if (contact != null &&
+        contact.ed25519Pub.isNotEmpty &&
+        !bytesEqual(contact.ed25519Pub, parsed.post.ed25519Pub)) {
+      return null;
+    }
+    return parsed.post.content;
+  }
+
   Future<void> _deliverPublic(Envelope env) async {
     if (bytesEqual(env.senderPub, identity.x25519Pub)) return;
     final cipher = env.ciphertext;
-    final plain = await crypto.openPublic(
+    final sealedPlain = await crypto.openPublic(
       roomName: publicRoomName,
       ciphertext: cipher.sublist(0, cipher.length - 16),
       nonce: env.nonce,
       tag: cipher.sublist(cipher.length - 16),
       aad: EnvelopeCodec.aadOf(env),
     );
+    final plain = await _verifyBroadcast(env, sealedPlain);
+    if (plain == null) return; // forged or impersonating — drop silently
+    if (await blocks.isBlocked(nodeIdOf(env.senderPub))) return;
     final body = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.into(db.messages).insertOnConflictUpdate(
@@ -500,6 +686,7 @@ class MeshRouter {
   }
 
   Future<void> _deliverToMe(Envelope env) async {
+    if (await blocks.isBlocked(nodeIdOf(env.senderPub))) return;
     final cipher = env.ciphertext;
     final aad = EnvelopeCodec.aadOf(env);
     final List<int> plain;
@@ -580,10 +767,11 @@ class MeshRouter {
   /// No receipts — group posts are broadcasts, like the public room.
   Future<void> _deliverGroup(Envelope env, GroupRow group) async {
     if (bytesEqual(env.senderPub, identity.x25519Pub)) return;
+    if (await blocks.isBlocked(nodeIdOf(env.senderPub))) return;
     final groupId = group.groupId;
     final isMediaRoom = groupId == WellKnown.mediaRoomId;
     final cipher = env.ciphertext;
-    final plain = await crypto.openWithKey(
+    final sealedPlain = await crypto.openWithKey(
       keyBytes: group.key,
       ciphertext: cipher.sublist(0, cipher.length - 16),
       nonce: env.nonce,
@@ -599,7 +787,9 @@ class MeshRouter {
 
     switch (env.payloadType) {
       case Protocol.payloadGroupText:
-        final body = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
+        final content = await _verifyBroadcast(env, sealedPlain);
+        if (content == null) return; // forged / impersonating — drop
+        final body = jsonDecode(utf8.decode(content)) as Map<String, Object?>;
         await db.into(db.messages).insertOnConflictUpdate(
               MessagesCompanion(
                 messageId: Value(env.messageIdHex),
@@ -621,8 +811,14 @@ class MeshRouter {
           (body['t'] as String?) ?? '',
         );
       case Protocol.payloadMediaManifest:
-        final m = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
+        final content = await _verifyBroadcast(env, sealedPlain);
+        if (content == null) return; // forged / impersonating — drop
+        final m = jsonDecode(utf8.decode(content)) as Map<String, Object?>;
         final mediaId = env.messageIdHex;
+        // Public Media channel: never auto-download. The manifest is stored
+        // but the chunks are only fetched/assembled when the user taps
+        // "view" — docs/SECURITY.md §4. Trusted groups auto-assemble.
+        final gated = isMediaRoom;
         await db.into(db.mediaItems).insertOnConflictUpdate(
               MediaItemsCompanion(
                 mediaId: Value(mediaId),
@@ -632,6 +828,7 @@ class MeshRouter {
                 totalSize: Value((m['size'] as num).toInt()),
                 chunkTotal: Value((m['total'] as num).toInt()),
                 sha256: Value(b64uDecode(m['sha'] as String)),
+                awaitingConsent: Value(gated),
               ),
             );
         await db.into(db.messages).insertOnConflictUpdate(
@@ -650,21 +847,30 @@ class MeshRouter {
                 status: Value(domain.MessageStatus.delivered.index),
               ),
             );
-        await _tryAssemble(mediaId, env, receipt: false);
+        if (!gated) await _tryAssemble(mediaId, env, receipt: false);
         onIncoming?.call(
           groupId,
           '${group.name} · ${(m['sender'] as String?) ?? 'member'}',
           'Shared a file',
         );
       case Protocol.payloadMediaChunk:
+        // Only store chunks for media whose signed manifest we accepted
+        // (anti-spam). Gated (public Media) items store chunks but don't
+        // assemble into a viewable file until the user taps "download".
+        final media = await (db.select(db.mediaItems)
+              ..where((x) => x.mediaId.equals(env.messageIdHex)))
+            .getSingleOrNull();
+        if (media == null || media.complete) return;
         await db.into(db.mediaChunks).insertOnConflictUpdate(
               MediaChunksCompanion(
                 mediaId: Value(env.messageIdHex),
                 chunkIndex: Value(env.chunkIndex),
-                data: Value(Uint8List.fromList(plain)),
+                data: Value(Uint8List.fromList(sealedPlain)),
               ),
             );
-        await _tryAssemble(env.messageIdHex, env, receipt: false);
+        if (!media.awaitingConsent) {
+          await _tryAssemble(env.messageIdHex, env, receipt: false);
+        }
     }
   }
 
@@ -777,20 +983,28 @@ class MeshRouter {
     await _tryAssemble(mediaId, env);
   }
 
-  Future<void> _tryAssemble(String mediaId, Envelope env,
-      {bool receipt = true}) async {
+  /// The user tapped "download" on a gated public-media item — assemble it
+  /// now (chunks were stored but not materialized before consent).
+  Future<void> downloadGatedMedia(String mediaId) async {
+    await (db.update(db.mediaItems)..where((m) => m.mediaId.equals(mediaId)))
+        .write(const MediaItemsCompanion(awaitingConsent: Value(false)));
+    await _assembleCore(mediaId);
+  }
+
+  /// Chunks → verified file on disk. Returns true if it completed this call.
+  Future<bool> _assembleCore(String mediaId) async {
     final media = await (db.select(db.mediaItems)
           ..where((m) => m.mediaId.equals(mediaId)))
         .getSingleOrNull();
-    if (media == null || media.complete) return;
+    if (media == null || media.complete) return false;
     final chunks = await (db.select(db.mediaChunks)
           ..where((c) => c.mediaId.equals(mediaId))
           ..orderBy([(c) => OrderingTerm.asc(c.chunkIndex)]))
         .get();
-    if (chunks.length < media.chunkTotal) return;
+    if (chunks.length < media.chunkTotal) return false;
 
     final bytes = concatBytes([for (final c in chunks) c.data]);
-    if (!bytesEqual(sha256Bytes(bytes), media.sha256)) return;
+    if (!bytesEqual(sha256Bytes(bytes), media.sha256)) return false;
 
     final path = await mediaStore.write(mediaId, media.mimeType, bytes);
     await (db.update(db.mediaItems)..where((m) => m.mediaId.equals(mediaId)))
@@ -800,6 +1014,16 @@ class MeshRouter {
     ));
     await (db.delete(db.mediaChunks)..where((c) => c.mediaId.equals(mediaId)))
         .go();
+    return true;
+  }
+
+  Future<void> _tryAssemble(String mediaId, Envelope env,
+      {bool receipt = true}) async {
+    if (!await _assembleCore(mediaId)) return;
+    final media = await (db.select(db.mediaItems)
+          ..where((m) => m.mediaId.equals(mediaId)))
+        .getSingleOrNull();
+    if (media == null) return;
     if (!receipt) return; // group/channel media: notified at manifest time
     await _sendReceipt(env);
     final msg = await (db.select(db.messages)
