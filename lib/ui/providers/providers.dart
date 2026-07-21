@@ -6,6 +6,7 @@ import '../../data/db/database.dart';
 import '../../services/chat/chat_service.dart';
 import '../../services/contacts/contact_service.dart';
 import '../../services/crypto/identity_service.dart';
+import '../../services/crypto/prekey_service.dart';
 import '../../services/crypto/session_crypto.dart';
 import '../../services/security/pin_service.dart';
 import '../../services/mesh/mesh_foreground.dart';
@@ -47,6 +48,8 @@ class MessyCore {
     final db = MessyDatabase();
     final crypto = SessionCrypto();
     final mediaStore = MediaStore();
+    final prekeys = PrekeyService(db: db);
+    await prekeys.ensurePool();
     final connectivity = ConnectivityManager(
       identity: identity,
       identityService: identityService,
@@ -54,7 +57,9 @@ class MessyCore {
     final router = MeshRouter(
       db: db,
       identity: identity,
+      identityService: identityService,
       crypto: crypto,
+      prekeys: prekeys,
       connectivity: connectivity,
       mediaStore: mediaStore,
     );
@@ -65,7 +70,12 @@ class MessyCore {
       crypto: crypto,
       connectivity: connectivity,
       router: router,
-      chat: ChatService(db: db, identity: identity, router: router),
+      chat: ChatService(
+        db: db,
+        identity: identity,
+        router: router,
+        prekeys: prekeys,
+      ),
       contacts: ContactService(
         db: db,
         identity: identity,

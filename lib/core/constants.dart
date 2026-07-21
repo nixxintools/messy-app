@@ -2,6 +2,10 @@
 abstract final class Protocol {
   static const int version = 0x01;
 
+  /// Envelope wire-format version. v2 added the forward-secrecy fields
+  /// (fsMode, ephPub, otkKeyId).
+  static const int envelopeVersion = 0x02;
+
   // Frame types
   static const int frameHello = 0x01;
   static const int frameEnvelope = 0x02;
@@ -11,6 +15,7 @@ abstract final class Protocol {
   static const int frameChunkReq = 0x06;
   static const int frameContactReq = 0x07;
   static const int frameContactAccept = 0x08;
+  static const int framePrekeys = 0x09; // signed one-time-prekey bundle
 
   // Payload types (inside envelope)
   static const int payloadText = 0x01;

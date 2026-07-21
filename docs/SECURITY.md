@@ -12,12 +12,28 @@ This document states plainly what Messy protects, how, and — just as important
 
 ## 2. End-to-end encryption (1:1 chats)
 
+### Forward secrecy via one-time prekeys (texts, receipts, invites)
+
+Each device maintains a pool of X25519 **one-time prekeys (OTKs)**:
+
+- Prekey publics are **issued per peer** (no two contacts ever hold the same one): a signed batch on every link-up (Ed25519 over the bundle, so a hostile network can't inject keys), plus a couple of fresh keys piggybacked inside every encrypted text and delivery receipt — long conversations replenish themselves with no server and no extra round trips.
+- Sealing: the sender consumes one unused OTK and computes
+  `K = HKDF-SHA256( DH(ephemeral, otk) ‖ DH(senderStatic, otk), salt="messy-otk-v1", info = ephPub ‖ otkPub )`
+  The ephemeral secret is discarded immediately; the envelope carries `ephPub` and the OTK id (both bound into the GCM associated data).
+- Opening: the recipient decrypts and then **deletes the OTK secret** — that deletion is the forward secrecy. A later compromise of the device's long-term key cannot decrypt captured ciphertext sealed to a burned OTK. The second DH authenticates the sender (only the holder of the sender's static key derives K).
+- When a peer's OTK pool is dry (e.g. long offline stretch), sending **falls back to the static session** below — delivery is never blocked, that message simply lacks FS, and the pool refills with the next contact.
+
+This is the OTK model (as used by store-and-forward messengers) rather than a Double Ratchet: it needs no synchronous round trips, which mesh delivery cannot guarantee. It does **not** provide post-compromise security — see §7.
+
+### Static session (fallback + media)
+
 - **Key agreement:** static-static ECDH — `shared = X25519(myPriv, theirPub)`.
 - **Session keys:** directional
   `sendKey = HKDF-SHA256(shared, salt="messy-v1", info = myPub ‖ theirPub)`
   `recvKey = HKDF-SHA256(shared, salt="messy-v1", info = theirPub ‖ myPub)`
-- **Per message:** fresh random 12-byte nonce, **AES-256-GCM**. The immutable envelope header (messageId, sender/recipient keys, timestamp, payload type, chunk fields) is authenticated as GCM associated data, so a relay that tampers with routing metadata breaks authentication at the recipient. TTL and hop count are excluded (they legitimately change per hop).
-- Media is chunked at 32 KiB; every chunk is independently encrypted with its own nonce, and the decrypted whole is verified against a SHA-256 in the (encrypted) manifest.
+- **Per message:** fresh random 12-byte nonce, **AES-256-GCM**. The immutable envelope header (messageId, sender/recipient keys, timestamp, payload type, chunk fields, and the FS fields) is authenticated as GCM associated data, so a relay that tampers with routing metadata breaks authentication at the recipient. TTL and hop count are excluded (they legitimately change per hop).
+- Media (manifest + 32 KiB chunks, each with its own nonce, SHA-256-verified on reassembly) intentionally uses the static session: one video would burn hundreds of OTKs. Per-transfer keys are the planned upgrade.
+- OTK secrets live in the local SQLite database (`secure_delete` on), not the Keystore — Android's Keystore cannot hold a rotating pool of raw X25519 keys. Unused keys expire after 14 days.
 
 ### What relays see
 Intermediate mesh hops store and forward **ciphertext only**. They can observe: sender and recipient public keys, message IDs, sizes, timing, TTL/hops. They can never read content. Traffic-analysis metadata is *not* hidden in v1.
@@ -50,7 +66,7 @@ The "Local" room is encrypted with a key derived from the room name (`HKDF("mess
 
 ## 7. Known limitations (v1) — deliberate, documented tradeoffs
 
-1. **No forward secrecy.** Static-static ECDH means a future compromise of a device's private key decrypts previously captured ciphertext for that pair. Ratcheting needs round trips that store-and-forward delivery cannot guarantee. **v2 path:** signed prekeys gossiped over the mesh, then a per-session ratchet. The 24 h auto-wipe and disappearing messages materially shrink this exposure window on-device.
+1. **Forward secrecy is per-message and best-effort, not absolute.** Texts, receipts, and group invites get FS whenever an unused one-time prekey is available; the first messages to a brand-new contact met over the mesh, messages after a long offline stretch, and all media fall back to the static session (no FS for those). There is **no post-compromise security**: an attacker who fully compromises a device can read messages going forward until keys age out — healing requires a Double Ratchet, which store-and-forward delivery cannot guarantee. Group messages use a static shared group key (no FS by design). The 24 h auto-wipe and disappearing messages shrink the on-device exposure window.
 2. **Metadata visible to relays** (who↔who, when, how much). Mitigating this (onion routing, cover traffic) is out of scope for v1.
 3. **First-contact MITM for nearby adds** — mitigated by the fingerprint phrase and QR re-verification, not eliminated.
 4. **Deniability/anonymity are non-goals.** Messages are signed; participation on a mesh is observable by radio proximity.

@@ -48,6 +48,47 @@ void main() {
     expect(EnvelopeCodec.aadOf(mutated), aad1);
   });
 
+  test('v2 forward-secrecy fields round-trip and are AAD-protected', () {
+    final env = Envelope(
+      messageId: Uint8List.fromList(List.generate(16, (i) => i)),
+      senderPub: Uint8List.fromList(List.generate(32, (i) => i)),
+      recipientPub: Uint8List.fromList(List.generate(32, (i) => 64 + i)),
+      ttl: 8,
+      hopCount: 0,
+      timestampMs: 1752969600000,
+      payloadType: Protocol.payloadText,
+      chunkIndex: 0,
+      chunkTotal: 0,
+      nonce: Uint8List.fromList(List.generate(12, (i) => i)),
+      fsMode: Envelope.fsOtk,
+      ephPub: Uint8List.fromList(List.generate(32, (i) => 128 + i)),
+      otkKeyId: Uint8List.fromList(List.generate(8, (i) => 240 + i)),
+      ciphertext: Uint8List.fromList([1, 2, 3]),
+    );
+    final decoded = EnvelopeCodec.decode(EnvelopeCodec.encode(env));
+    expect(decoded.fsMode, Envelope.fsOtk);
+    expect(decoded.ephPub, env.ephPub);
+    expect(decoded.otkKeyId, env.otkKeyId);
+    // fs fields are part of the AAD: swapping the ephemeral changes it.
+    final tamperedAad = EnvelopeCodec.aadOf(Envelope(
+      messageId: env.messageId,
+      senderPub: env.senderPub,
+      recipientPub: env.recipientPub,
+      ttl: env.ttl,
+      hopCount: env.hopCount,
+      timestampMs: env.timestampMs,
+      payloadType: env.payloadType,
+      chunkIndex: env.chunkIndex,
+      chunkTotal: env.chunkTotal,
+      nonce: env.nonce,
+      fsMode: env.fsMode,
+      ephPub: Uint8List(32),
+      otkKeyId: env.otkKeyId,
+      ciphertext: Uint8List(0),
+    ));
+    expect(tamperedAad, isNot(EnvelopeCodec.aadOf(env)));
+  });
+
   test('all-zero recipient means public broadcast', () {
     final env = _sample();
     expect(env.isPublic, isFalse);

@@ -61,7 +61,8 @@ Working v1 (Android):
 - ✅ Photo/video transfer with resume · videos auto-compressed to 720p
 - ✅ Disappearing messages + 24 h auto-wipe (on by default)
 - ✅ Background mesh: foreground service keeps receiving/relaying with the screen off
-- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, Bluetooth LE transport (for phones with Wi-Fi off), opportunistic internet P2P (WebRTC, serverless), forward secrecy
+- ✅ Forward secrecy for 1:1 texts via one-time prekeys — issued per peer, replenished in-band, burned after use (see [SECURITY.md](docs/SECURITY.md))
+- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, Bluetooth LE transport (for phones with Wi-Fi off), opportunistic internet P2P (WebRTC, serverless), post-compromise security (ratcheting), FS for media via per-transfer keys
 
 ## Build & run
 

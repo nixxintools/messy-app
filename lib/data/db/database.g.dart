@@ -3353,6 +3353,680 @@ class GroupsCompanion extends UpdateCompanion<GroupRow> {
   }
 }
 
+class $OwnPrekeysTable extends OwnPrekeys
+    with TableInfo<$OwnPrekeysTable, OwnPrekeyRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OwnPrekeysTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyIdMeta = const VerificationMeta('keyId');
+  @override
+  late final GeneratedColumn<String> keyId = GeneratedColumn<String>(
+    'key_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _privMeta = const VerificationMeta('priv');
+  @override
+  late final GeneratedColumn<Uint8List> priv = GeneratedColumn<Uint8List>(
+    'priv',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pubMeta = const VerificationMeta('pub');
+  @override
+  late final GeneratedColumn<Uint8List> pub = GeneratedColumn<Uint8List>(
+    'pub',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _issuedToMeta = const VerificationMeta(
+    'issuedTo',
+  );
+  @override
+  late final GeneratedColumn<String> issuedTo = GeneratedColumn<String>(
+    'issued_to',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [keyId, priv, pub, createdAt, issuedTo];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'own_prekeys';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<OwnPrekeyRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key_id')) {
+      context.handle(
+        _keyIdMeta,
+        keyId.isAcceptableOrUnknown(data['key_id']!, _keyIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyIdMeta);
+    }
+    if (data.containsKey('priv')) {
+      context.handle(
+        _privMeta,
+        priv.isAcceptableOrUnknown(data['priv']!, _privMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_privMeta);
+    }
+    if (data.containsKey('pub')) {
+      context.handle(
+        _pubMeta,
+        pub.isAcceptableOrUnknown(data['pub']!, _pubMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pubMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('issued_to')) {
+      context.handle(
+        _issuedToMeta,
+        issuedTo.isAcceptableOrUnknown(data['issued_to']!, _issuedToMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {keyId};
+  @override
+  OwnPrekeyRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return OwnPrekeyRow(
+      keyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key_id'],
+      )!,
+      priv: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}priv'],
+      )!,
+      pub: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}pub'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      issuedTo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}issued_to'],
+      ),
+    );
+  }
+
+  @override
+  $OwnPrekeysTable createAlias(String alias) {
+    return $OwnPrekeysTable(attachedDatabase, alias);
+  }
+}
+
+class OwnPrekeyRow extends DataClass implements Insertable<OwnPrekeyRow> {
+  final String keyId;
+  final Uint8List priv;
+  final Uint8List pub;
+  final int createdAt;
+  final String? issuedTo;
+  const OwnPrekeyRow({
+    required this.keyId,
+    required this.priv,
+    required this.pub,
+    required this.createdAt,
+    this.issuedTo,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key_id'] = Variable<String>(keyId);
+    map['priv'] = Variable<Uint8List>(priv);
+    map['pub'] = Variable<Uint8List>(pub);
+    map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || issuedTo != null) {
+      map['issued_to'] = Variable<String>(issuedTo);
+    }
+    return map;
+  }
+
+  OwnPrekeysCompanion toCompanion(bool nullToAbsent) {
+    return OwnPrekeysCompanion(
+      keyId: Value(keyId),
+      priv: Value(priv),
+      pub: Value(pub),
+      createdAt: Value(createdAt),
+      issuedTo: issuedTo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(issuedTo),
+    );
+  }
+
+  factory OwnPrekeyRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return OwnPrekeyRow(
+      keyId: serializer.fromJson<String>(json['keyId']),
+      priv: serializer.fromJson<Uint8List>(json['priv']),
+      pub: serializer.fromJson<Uint8List>(json['pub']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      issuedTo: serializer.fromJson<String?>(json['issuedTo']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'keyId': serializer.toJson<String>(keyId),
+      'priv': serializer.toJson<Uint8List>(priv),
+      'pub': serializer.toJson<Uint8List>(pub),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'issuedTo': serializer.toJson<String?>(issuedTo),
+    };
+  }
+
+  OwnPrekeyRow copyWith({
+    String? keyId,
+    Uint8List? priv,
+    Uint8List? pub,
+    int? createdAt,
+    Value<String?> issuedTo = const Value.absent(),
+  }) => OwnPrekeyRow(
+    keyId: keyId ?? this.keyId,
+    priv: priv ?? this.priv,
+    pub: pub ?? this.pub,
+    createdAt: createdAt ?? this.createdAt,
+    issuedTo: issuedTo.present ? issuedTo.value : this.issuedTo,
+  );
+  OwnPrekeyRow copyWithCompanion(OwnPrekeysCompanion data) {
+    return OwnPrekeyRow(
+      keyId: data.keyId.present ? data.keyId.value : this.keyId,
+      priv: data.priv.present ? data.priv.value : this.priv,
+      pub: data.pub.present ? data.pub.value : this.pub,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      issuedTo: data.issuedTo.present ? data.issuedTo.value : this.issuedTo,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OwnPrekeyRow(')
+          ..write('keyId: $keyId, ')
+          ..write('priv: $priv, ')
+          ..write('pub: $pub, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('issuedTo: $issuedTo')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    keyId,
+    $driftBlobEquality.hash(priv),
+    $driftBlobEquality.hash(pub),
+    createdAt,
+    issuedTo,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is OwnPrekeyRow &&
+          other.keyId == this.keyId &&
+          $driftBlobEquality.equals(other.priv, this.priv) &&
+          $driftBlobEquality.equals(other.pub, this.pub) &&
+          other.createdAt == this.createdAt &&
+          other.issuedTo == this.issuedTo);
+}
+
+class OwnPrekeysCompanion extends UpdateCompanion<OwnPrekeyRow> {
+  final Value<String> keyId;
+  final Value<Uint8List> priv;
+  final Value<Uint8List> pub;
+  final Value<int> createdAt;
+  final Value<String?> issuedTo;
+  final Value<int> rowid;
+  const OwnPrekeysCompanion({
+    this.keyId = const Value.absent(),
+    this.priv = const Value.absent(),
+    this.pub = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.issuedTo = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OwnPrekeysCompanion.insert({
+    required String keyId,
+    required Uint8List priv,
+    required Uint8List pub,
+    required int createdAt,
+    this.issuedTo = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : keyId = Value(keyId),
+       priv = Value(priv),
+       pub = Value(pub),
+       createdAt = Value(createdAt);
+  static Insertable<OwnPrekeyRow> custom({
+    Expression<String>? keyId,
+    Expression<Uint8List>? priv,
+    Expression<Uint8List>? pub,
+    Expression<int>? createdAt,
+    Expression<String>? issuedTo,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (keyId != null) 'key_id': keyId,
+      if (priv != null) 'priv': priv,
+      if (pub != null) 'pub': pub,
+      if (createdAt != null) 'created_at': createdAt,
+      if (issuedTo != null) 'issued_to': issuedTo,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OwnPrekeysCompanion copyWith({
+    Value<String>? keyId,
+    Value<Uint8List>? priv,
+    Value<Uint8List>? pub,
+    Value<int>? createdAt,
+    Value<String?>? issuedTo,
+    Value<int>? rowid,
+  }) {
+    return OwnPrekeysCompanion(
+      keyId: keyId ?? this.keyId,
+      priv: priv ?? this.priv,
+      pub: pub ?? this.pub,
+      createdAt: createdAt ?? this.createdAt,
+      issuedTo: issuedTo ?? this.issuedTo,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (keyId.present) {
+      map['key_id'] = Variable<String>(keyId.value);
+    }
+    if (priv.present) {
+      map['priv'] = Variable<Uint8List>(priv.value);
+    }
+    if (pub.present) {
+      map['pub'] = Variable<Uint8List>(pub.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (issuedTo.present) {
+      map['issued_to'] = Variable<String>(issuedTo.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OwnPrekeysCompanion(')
+          ..write('keyId: $keyId, ')
+          ..write('priv: $priv, ')
+          ..write('pub: $pub, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('issuedTo: $issuedTo, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PeerPrekeysTable extends PeerPrekeys
+    with TableInfo<$PeerPrekeysTable, PeerPrekeyRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PeerPrekeysTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _nodeIdMeta = const VerificationMeta('nodeId');
+  @override
+  late final GeneratedColumn<String> nodeId = GeneratedColumn<String>(
+    'node_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _keyIdMeta = const VerificationMeta('keyId');
+  @override
+  late final GeneratedColumn<String> keyId = GeneratedColumn<String>(
+    'key_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pubMeta = const VerificationMeta('pub');
+  @override
+  late final GeneratedColumn<Uint8List> pub = GeneratedColumn<Uint8List>(
+    'pub',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta(
+    'receivedAt',
+  );
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+    'received_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [nodeId, keyId, pub, receivedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'peer_prekeys';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PeerPrekeyRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('node_id')) {
+      context.handle(
+        _nodeIdMeta,
+        nodeId.isAcceptableOrUnknown(data['node_id']!, _nodeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nodeIdMeta);
+    }
+    if (data.containsKey('key_id')) {
+      context.handle(
+        _keyIdMeta,
+        keyId.isAcceptableOrUnknown(data['key_id']!, _keyIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyIdMeta);
+    }
+    if (data.containsKey('pub')) {
+      context.handle(
+        _pubMeta,
+        pub.isAcceptableOrUnknown(data['pub']!, _pubMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pubMeta);
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+        _receivedAtMeta,
+        receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_receivedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {nodeId, keyId};
+  @override
+  PeerPrekeyRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PeerPrekeyRow(
+      nodeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}node_id'],
+      )!,
+      keyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key_id'],
+      )!,
+      pub: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}pub'],
+      )!,
+      receivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PeerPrekeysTable createAlias(String alias) {
+    return $PeerPrekeysTable(attachedDatabase, alias);
+  }
+}
+
+class PeerPrekeyRow extends DataClass implements Insertable<PeerPrekeyRow> {
+  final String nodeId;
+  final String keyId;
+  final Uint8List pub;
+  final int receivedAt;
+  const PeerPrekeyRow({
+    required this.nodeId,
+    required this.keyId,
+    required this.pub,
+    required this.receivedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['node_id'] = Variable<String>(nodeId);
+    map['key_id'] = Variable<String>(keyId);
+    map['pub'] = Variable<Uint8List>(pub);
+    map['received_at'] = Variable<int>(receivedAt);
+    return map;
+  }
+
+  PeerPrekeysCompanion toCompanion(bool nullToAbsent) {
+    return PeerPrekeysCompanion(
+      nodeId: Value(nodeId),
+      keyId: Value(keyId),
+      pub: Value(pub),
+      receivedAt: Value(receivedAt),
+    );
+  }
+
+  factory PeerPrekeyRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PeerPrekeyRow(
+      nodeId: serializer.fromJson<String>(json['nodeId']),
+      keyId: serializer.fromJson<String>(json['keyId']),
+      pub: serializer.fromJson<Uint8List>(json['pub']),
+      receivedAt: serializer.fromJson<int>(json['receivedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'nodeId': serializer.toJson<String>(nodeId),
+      'keyId': serializer.toJson<String>(keyId),
+      'pub': serializer.toJson<Uint8List>(pub),
+      'receivedAt': serializer.toJson<int>(receivedAt),
+    };
+  }
+
+  PeerPrekeyRow copyWith({
+    String? nodeId,
+    String? keyId,
+    Uint8List? pub,
+    int? receivedAt,
+  }) => PeerPrekeyRow(
+    nodeId: nodeId ?? this.nodeId,
+    keyId: keyId ?? this.keyId,
+    pub: pub ?? this.pub,
+    receivedAt: receivedAt ?? this.receivedAt,
+  );
+  PeerPrekeyRow copyWithCompanion(PeerPrekeysCompanion data) {
+    return PeerPrekeyRow(
+      nodeId: data.nodeId.present ? data.nodeId.value : this.nodeId,
+      keyId: data.keyId.present ? data.keyId.value : this.keyId,
+      pub: data.pub.present ? data.pub.value : this.pub,
+      receivedAt: data.receivedAt.present
+          ? data.receivedAt.value
+          : this.receivedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PeerPrekeyRow(')
+          ..write('nodeId: $nodeId, ')
+          ..write('keyId: $keyId, ')
+          ..write('pub: $pub, ')
+          ..write('receivedAt: $receivedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(nodeId, keyId, $driftBlobEquality.hash(pub), receivedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PeerPrekeyRow &&
+          other.nodeId == this.nodeId &&
+          other.keyId == this.keyId &&
+          $driftBlobEquality.equals(other.pub, this.pub) &&
+          other.receivedAt == this.receivedAt);
+}
+
+class PeerPrekeysCompanion extends UpdateCompanion<PeerPrekeyRow> {
+  final Value<String> nodeId;
+  final Value<String> keyId;
+  final Value<Uint8List> pub;
+  final Value<int> receivedAt;
+  final Value<int> rowid;
+  const PeerPrekeysCompanion({
+    this.nodeId = const Value.absent(),
+    this.keyId = const Value.absent(),
+    this.pub = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PeerPrekeysCompanion.insert({
+    required String nodeId,
+    required String keyId,
+    required Uint8List pub,
+    required int receivedAt,
+    this.rowid = const Value.absent(),
+  }) : nodeId = Value(nodeId),
+       keyId = Value(keyId),
+       pub = Value(pub),
+       receivedAt = Value(receivedAt);
+  static Insertable<PeerPrekeyRow> custom({
+    Expression<String>? nodeId,
+    Expression<String>? keyId,
+    Expression<Uint8List>? pub,
+    Expression<int>? receivedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (nodeId != null) 'node_id': nodeId,
+      if (keyId != null) 'key_id': keyId,
+      if (pub != null) 'pub': pub,
+      if (receivedAt != null) 'received_at': receivedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PeerPrekeysCompanion copyWith({
+    Value<String>? nodeId,
+    Value<String>? keyId,
+    Value<Uint8List>? pub,
+    Value<int>? receivedAt,
+    Value<int>? rowid,
+  }) {
+    return PeerPrekeysCompanion(
+      nodeId: nodeId ?? this.nodeId,
+      keyId: keyId ?? this.keyId,
+      pub: pub ?? this.pub,
+      receivedAt: receivedAt ?? this.receivedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (nodeId.present) {
+      map['node_id'] = Variable<String>(nodeId.value);
+    }
+    if (keyId.present) {
+      map['key_id'] = Variable<String>(keyId.value);
+    }
+    if (pub.present) {
+      map['pub'] = Variable<Uint8List>(pub.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PeerPrekeysCompanion(')
+          ..write('nodeId: $nodeId, ')
+          ..write('keyId: $keyId, ')
+          ..write('pub: $pub, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SettingsTable extends Settings
     with TableInfo<$SettingsTable, SettingRow> {
   @override
@@ -3572,6 +4246,8 @@ abstract class _$MessyDatabase extends GeneratedDatabase {
   late final $RelayStoreTable relayStore = $RelayStoreTable(this);
   late final $SeenEnvelopesTable seenEnvelopes = $SeenEnvelopesTable(this);
   late final $GroupsTable groups = $GroupsTable(this);
+  late final $OwnPrekeysTable ownPrekeys = $OwnPrekeysTable(this);
+  late final $PeerPrekeysTable peerPrekeys = $PeerPrekeysTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -3586,6 +4262,8 @@ abstract class _$MessyDatabase extends GeneratedDatabase {
     relayStore,
     seenEnvelopes,
     groups,
+    ownPrekeys,
+    peerPrekeys,
     settings,
   ];
 }
@@ -5343,6 +6021,389 @@ typedef $$GroupsTableProcessedTableManager =
       GroupRow,
       PrefetchHooks Function()
     >;
+typedef $$OwnPrekeysTableCreateCompanionBuilder =
+    OwnPrekeysCompanion Function({
+      required String keyId,
+      required Uint8List priv,
+      required Uint8List pub,
+      required int createdAt,
+      Value<String?> issuedTo,
+      Value<int> rowid,
+    });
+typedef $$OwnPrekeysTableUpdateCompanionBuilder =
+    OwnPrekeysCompanion Function({
+      Value<String> keyId,
+      Value<Uint8List> priv,
+      Value<Uint8List> pub,
+      Value<int> createdAt,
+      Value<String?> issuedTo,
+      Value<int> rowid,
+    });
+
+class $$OwnPrekeysTableFilterComposer
+    extends Composer<_$MessyDatabase, $OwnPrekeysTable> {
+  $$OwnPrekeysTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get keyId => $composableBuilder(
+    column: $table.keyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get priv => $composableBuilder(
+    column: $table.priv,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get pub => $composableBuilder(
+    column: $table.pub,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get issuedTo => $composableBuilder(
+    column: $table.issuedTo,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OwnPrekeysTableOrderingComposer
+    extends Composer<_$MessyDatabase, $OwnPrekeysTable> {
+  $$OwnPrekeysTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get keyId => $composableBuilder(
+    column: $table.keyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get priv => $composableBuilder(
+    column: $table.priv,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get pub => $composableBuilder(
+    column: $table.pub,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get issuedTo => $composableBuilder(
+    column: $table.issuedTo,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OwnPrekeysTableAnnotationComposer
+    extends Composer<_$MessyDatabase, $OwnPrekeysTable> {
+  $$OwnPrekeysTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get keyId =>
+      $composableBuilder(column: $table.keyId, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get priv =>
+      $composableBuilder(column: $table.priv, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get pub =>
+      $composableBuilder(column: $table.pub, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get issuedTo =>
+      $composableBuilder(column: $table.issuedTo, builder: (column) => column);
+}
+
+class $$OwnPrekeysTableTableManager
+    extends
+        RootTableManager<
+          _$MessyDatabase,
+          $OwnPrekeysTable,
+          OwnPrekeyRow,
+          $$OwnPrekeysTableFilterComposer,
+          $$OwnPrekeysTableOrderingComposer,
+          $$OwnPrekeysTableAnnotationComposer,
+          $$OwnPrekeysTableCreateCompanionBuilder,
+          $$OwnPrekeysTableUpdateCompanionBuilder,
+          (
+            OwnPrekeyRow,
+            BaseReferences<_$MessyDatabase, $OwnPrekeysTable, OwnPrekeyRow>,
+          ),
+          OwnPrekeyRow,
+          PrefetchHooks Function()
+        > {
+  $$OwnPrekeysTableTableManager(_$MessyDatabase db, $OwnPrekeysTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OwnPrekeysTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OwnPrekeysTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OwnPrekeysTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> keyId = const Value.absent(),
+                Value<Uint8List> priv = const Value.absent(),
+                Value<Uint8List> pub = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<String?> issuedTo = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OwnPrekeysCompanion(
+                keyId: keyId,
+                priv: priv,
+                pub: pub,
+                createdAt: createdAt,
+                issuedTo: issuedTo,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String keyId,
+                required Uint8List priv,
+                required Uint8List pub,
+                required int createdAt,
+                Value<String?> issuedTo = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OwnPrekeysCompanion.insert(
+                keyId: keyId,
+                priv: priv,
+                pub: pub,
+                createdAt: createdAt,
+                issuedTo: issuedTo,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OwnPrekeysTableProcessedTableManager =
+    ProcessedTableManager<
+      _$MessyDatabase,
+      $OwnPrekeysTable,
+      OwnPrekeyRow,
+      $$OwnPrekeysTableFilterComposer,
+      $$OwnPrekeysTableOrderingComposer,
+      $$OwnPrekeysTableAnnotationComposer,
+      $$OwnPrekeysTableCreateCompanionBuilder,
+      $$OwnPrekeysTableUpdateCompanionBuilder,
+      (
+        OwnPrekeyRow,
+        BaseReferences<_$MessyDatabase, $OwnPrekeysTable, OwnPrekeyRow>,
+      ),
+      OwnPrekeyRow,
+      PrefetchHooks Function()
+    >;
+typedef $$PeerPrekeysTableCreateCompanionBuilder =
+    PeerPrekeysCompanion Function({
+      required String nodeId,
+      required String keyId,
+      required Uint8List pub,
+      required int receivedAt,
+      Value<int> rowid,
+    });
+typedef $$PeerPrekeysTableUpdateCompanionBuilder =
+    PeerPrekeysCompanion Function({
+      Value<String> nodeId,
+      Value<String> keyId,
+      Value<Uint8List> pub,
+      Value<int> receivedAt,
+      Value<int> rowid,
+    });
+
+class $$PeerPrekeysTableFilterComposer
+    extends Composer<_$MessyDatabase, $PeerPrekeysTable> {
+  $$PeerPrekeysTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get nodeId => $composableBuilder(
+    column: $table.nodeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get keyId => $composableBuilder(
+    column: $table.keyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get pub => $composableBuilder(
+    column: $table.pub,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PeerPrekeysTableOrderingComposer
+    extends Composer<_$MessyDatabase, $PeerPrekeysTable> {
+  $$PeerPrekeysTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get nodeId => $composableBuilder(
+    column: $table.nodeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get keyId => $composableBuilder(
+    column: $table.keyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get pub => $composableBuilder(
+    column: $table.pub,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PeerPrekeysTableAnnotationComposer
+    extends Composer<_$MessyDatabase, $PeerPrekeysTable> {
+  $$PeerPrekeysTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get nodeId =>
+      $composableBuilder(column: $table.nodeId, builder: (column) => column);
+
+  GeneratedColumn<String> get keyId =>
+      $composableBuilder(column: $table.keyId, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get pub =>
+      $composableBuilder(column: $table.pub, builder: (column) => column);
+
+  GeneratedColumn<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$PeerPrekeysTableTableManager
+    extends
+        RootTableManager<
+          _$MessyDatabase,
+          $PeerPrekeysTable,
+          PeerPrekeyRow,
+          $$PeerPrekeysTableFilterComposer,
+          $$PeerPrekeysTableOrderingComposer,
+          $$PeerPrekeysTableAnnotationComposer,
+          $$PeerPrekeysTableCreateCompanionBuilder,
+          $$PeerPrekeysTableUpdateCompanionBuilder,
+          (
+            PeerPrekeyRow,
+            BaseReferences<_$MessyDatabase, $PeerPrekeysTable, PeerPrekeyRow>,
+          ),
+          PeerPrekeyRow,
+          PrefetchHooks Function()
+        > {
+  $$PeerPrekeysTableTableManager(_$MessyDatabase db, $PeerPrekeysTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PeerPrekeysTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PeerPrekeysTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PeerPrekeysTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> nodeId = const Value.absent(),
+                Value<String> keyId = const Value.absent(),
+                Value<Uint8List> pub = const Value.absent(),
+                Value<int> receivedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PeerPrekeysCompanion(
+                nodeId: nodeId,
+                keyId: keyId,
+                pub: pub,
+                receivedAt: receivedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String nodeId,
+                required String keyId,
+                required Uint8List pub,
+                required int receivedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PeerPrekeysCompanion.insert(
+                nodeId: nodeId,
+                keyId: keyId,
+                pub: pub,
+                receivedAt: receivedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PeerPrekeysTableProcessedTableManager =
+    ProcessedTableManager<
+      _$MessyDatabase,
+      $PeerPrekeysTable,
+      PeerPrekeyRow,
+      $$PeerPrekeysTableFilterComposer,
+      $$PeerPrekeysTableOrderingComposer,
+      $$PeerPrekeysTableAnnotationComposer,
+      $$PeerPrekeysTableCreateCompanionBuilder,
+      $$PeerPrekeysTableUpdateCompanionBuilder,
+      (
+        PeerPrekeyRow,
+        BaseReferences<_$MessyDatabase, $PeerPrekeysTable, PeerPrekeyRow>,
+      ),
+      PeerPrekeyRow,
+      PrefetchHooks Function()
+    >;
 typedef $$SettingsTableCreateCompanionBuilder =
     SettingsCompanion Function({
       required String key,
@@ -5499,6 +6560,10 @@ class $MessyDatabaseManager {
       $$SeenEnvelopesTableTableManager(_db, _db.seenEnvelopes);
   $$GroupsTableTableManager get groups =>
       $$GroupsTableTableManager(_db, _db.groups);
+  $$OwnPrekeysTableTableManager get ownPrekeys =>
+      $$OwnPrekeysTableTableManager(_db, _db.ownPrekeys);
+  $$PeerPrekeysTableTableManager get peerPrekeys =>
+      $$PeerPrekeysTableTableManager(_db, _db.peerPrekeys);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
 }

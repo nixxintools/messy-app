@@ -115,6 +115,33 @@ class Groups extends Table {
   Set<Column> get primaryKey => {groupId};
 }
 
+/// Our own one-time prekeys (forward secrecy). The secret is DELETED after
+/// a message sealed to it is decrypted — that deletion is the forward
+/// secrecy. Keys are issued per peer so no two contacts hold the same one.
+@DataClassName('OwnPrekeyRow')
+class OwnPrekeys extends Table {
+  TextColumn get keyId => text()(); // hex(SHA-256(pub)[0..8])
+  BlobColumn get priv => blob()();
+  BlobColumn get pub => blob()();
+  IntColumn get createdAt => integer()();
+  TextColumn get issuedTo => text().nullable()(); // peer nodeId
+
+  @override
+  Set<Column> get primaryKey => {keyId};
+}
+
+/// Unused one-time prekeys peers have issued to us; consumed when sealing.
+@DataClassName('PeerPrekeyRow')
+class PeerPrekeys extends Table {
+  TextColumn get nodeId => text()();
+  TextColumn get keyId => text()();
+  BlobColumn get pub => blob()();
+  IntColumn get receivedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {nodeId, keyId};
+}
+
 @DataClassName('SettingRow')
 class Settings extends Table {
   TextColumn get key => text()();
@@ -134,6 +161,8 @@ class Settings extends Table {
     RelayStore,
     SeenEnvelopes,
     Groups,
+    OwnPrekeys,
+    PeerPrekeys,
     Settings,
   ],
 )
@@ -143,13 +172,17 @@ class MessyDatabase extends _$MessyDatabase {
   MessyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(groups);
+          }
+          if (from < 3) {
+            await m.createTable(ownPrekeys);
+            await m.createTable(peerPrekeys);
           }
         },
         beforeOpen: (details) async {

@@ -17,6 +17,14 @@ Uint8List concatBytes(List<List<int>> parts) {
 String hexEncode(List<int> bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
+Uint8List hexDecode(String hex) {
+  final out = Uint8List(hex.length ~/ 2);
+  for (var i = 0; i < out.length; i++) {
+    out[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+  }
+  return out;
+}
+
 Uint8List sha256Bytes(List<int> data) =>
     Uint8List.fromList(crypto.sha256.convert(data).bytes);
 

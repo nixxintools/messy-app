@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cryptography/cryptography.dart' show SecretBox, SimpleKeyPair;
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -14,6 +15,7 @@ import '../../domain/entities/message.dart' as domain;
 import '../../transport/connectivity_manager.dart';
 import '../../core/well_known.dart';
 import '../crypto/identity_service.dart';
+import '../crypto/prekey_service.dart';
 import '../crypto/session_crypto.dart';
 import '../transfer/media_store.dart';
 
@@ -26,7 +28,9 @@ class MeshRouter {
   MeshRouter({
     required this.db,
     required this.identity,
+    required this.identityService,
     required this.crypto,
+    required this.prekeys,
     required this.connectivity,
     required this.mediaStore,
   });
@@ -35,7 +39,9 @@ class MeshRouter {
 
   final MessyDatabase db;
   final LocalIdentity identity;
+  final IdentityService identityService;
   final SessionCrypto crypto;
+  final PrekeyService prekeys;
   final ConnectivityManager connectivity;
   final MediaStore mediaStore;
 
@@ -57,8 +63,54 @@ class MeshRouter {
       // setFrameHandler replays anything the peer sent before this event
       // was delivered — no frames are lost in the link-up window.
       auth.setFrameHandler((frame) => _onFrame(auth, frame));
+      _sendPrekeyBundle(auth);
       _syncTo(auth);
     });
+  }
+
+  /// Issues a batch of one-time prekeys to a freshly-linked peer, signed
+  /// with our Ed25519 identity so a hostile network can't inject keys.
+  Future<void> _sendPrekeyBundle(AuthenticatedLink auth) async {
+    try {
+      final pk =
+          await prekeys.issueTo(auth.nodeId, PrekeyService.issueBatch);
+      if (pk.isEmpty) return;
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final sig = await identityService.sign(
+        identity,
+        PrekeyService.bundleSignedBytes(ts, pk),
+      );
+      await auth.link.sendFrame(FrameCodec.encodeJson(Protocol.framePrekeys, {
+        'pk': pk,
+        'ts': ts,
+        'sig': b64u(sig),
+      }));
+    } on Object {
+      // Link died mid-send; the next link-up re-issues.
+    }
+  }
+
+  Future<void> _onPrekeyFrame(
+    AuthenticatedLink from,
+    Map<String, Object?> body,
+  ) async {
+    try {
+      final pk = (body['pk'] as List?) ?? const [];
+      final ts = body['ts'] as int;
+      final sig = b64uDecode(body['sig'] as String);
+      final ok = await IdentityService.verify(
+        message: PrekeyService.bundleSignedBytes(
+          ts,
+          [for (final e in pk) (e as Map).cast<String, String>()],
+        ),
+        signature: sig,
+        ed25519Pub: from.ed25519Pub,
+      );
+      if (!ok) return;
+      await prekeys.storePeerOtks(from.nodeId, pk);
+    } on Object {
+      // Malformed bundle — ignore.
+    }
   }
 
   // ---------------------------------------------------------------- sending
@@ -70,6 +122,12 @@ class MeshRouter {
       hexEncode(sha256Bytes(x25519Pub).sublist(0, 8));
 
   /// Encrypts and publishes a 1:1 payload. Returns the message id (hex).
+  ///
+  /// Forward secrecy: small payloads (text, receipts, group invites) are
+  /// sealed to one of the recipient's one-time prekeys when we hold an
+  /// unused one, falling back to the static session when the pool is dry.
+  /// Media stays on static sessions — a single video would drain hundreds
+  /// of prekeys.
   Future<String> sendDirect({
     required Uint8List recipientPub,
     required int payloadType,
@@ -78,13 +136,21 @@ class MeshRouter {
     int chunkIndex = 0,
     int chunkTotal = 0,
   }) async {
-    await crypto.ensureSession(
-      myKeyPair: identity.x25519KeyPair,
-      myPub: identity.x25519Pub,
-      theirPub: recipientPub,
-    );
     final id = messageId ?? _newMessageId();
     final nonce = crypto.newNonce();
+    final recipientNode = nodeIdOf(recipientPub);
+
+    final wantsFs = payloadType == Protocol.payloadText ||
+        payloadType == Protocol.payloadDeliveryReceipt ||
+        payloadType == Protocol.payloadGroupInvite;
+    final otk = wantsFs ? await prekeys.takePeerOtk(recipientNode) : null;
+
+    Uint8List? ephPub;
+    SimpleKeyPair? ephKeyPair;
+    if (otk != null) {
+      (ephKeyPair, ephPub) = await crypto.newEphemeral();
+    }
+
     final env = Envelope(
       messageId: id,
       senderPub: identity.x25519Pub,
@@ -96,14 +162,38 @@ class MeshRouter {
       chunkIndex: chunkIndex,
       chunkTotal: chunkTotal,
       nonce: nonce,
+      fsMode: otk == null ? Envelope.fsStatic : Envelope.fsOtk,
+      ephPub: ephPub,
+      otkKeyId: otk == null ? null : hexDecode(otk.keyId),
       ciphertext: Uint8List(0),
     );
-    final box = await crypto.sealFor(
-      theirPub: recipientPub,
-      plaintext: plaintext,
-      nonce: nonce,
-      aad: EnvelopeCodec.aadOf(env),
-    );
+    final aad = EnvelopeCodec.aadOf(env);
+
+    final SecretBox box;
+    if (otk != null) {
+      box = await crypto.sealOtk(
+        ephKeyPair: ephKeyPair!,
+        ephPub: ephPub!,
+        myStaticKeyPair: identity.x25519KeyPair,
+        otkPub: otk.pub,
+        plaintext: plaintext,
+        nonce: nonce,
+        aad: aad,
+      );
+    } else {
+      await crypto.ensureSession(
+        myKeyPair: identity.x25519KeyPair,
+        myPub: identity.x25519Pub,
+        theirPub: recipientPub,
+      );
+      box = await crypto.sealFor(
+        theirPub: recipientPub,
+        plaintext: plaintext,
+        nonce: nonce,
+        aad: aad,
+      );
+    }
+
     final sealed = Envelope(
       messageId: id,
       senderPub: env.senderPub,
@@ -115,9 +205,12 @@ class MeshRouter {
       chunkIndex: chunkIndex,
       chunkTotal: chunkTotal,
       nonce: nonce,
+      fsMode: env.fsMode,
+      ephPub: env.ephPub,
+      otkKeyId: env.otkKeyId,
       ciphertext: concatBytes([box.cipherText, box.mac.bytes]),
     );
-    await _publish(sealed, recipientNodeId: nodeIdOf(recipientPub));
+    await _publish(sealed, recipientNodeId: recipientNode);
     return sealed.messageIdHex;
   }
 
@@ -272,6 +365,8 @@ class MeshRouter {
           onContactRequest?.call(from, FrameCodec.decodeJson(frame));
         case Protocol.frameContactAccept:
           onContactAccept?.call(from, FrameCodec.decodeJson(frame));
+        case Protocol.framePrekeys:
+          await _onPrekeyFrame(from, FrameCodec.decodeJson(frame));
         default:
           break; // hello handled by ConnectivityManager; rest reserved
       }
@@ -405,25 +500,46 @@ class MeshRouter {
   }
 
   Future<void> _deliverToMe(Envelope env) async {
-    await crypto.ensureSession(
-      myKeyPair: identity.x25519KeyPair,
-      myPub: identity.x25519Pub,
-      theirPub: env.senderPub,
-    );
     final cipher = env.ciphertext;
-    final plain = await crypto.openFrom(
-      theirPub: env.senderPub,
-      ciphertext: cipher.sublist(0, cipher.length - 16),
-      nonce: env.nonce,
-      tag: cipher.sublist(cipher.length - 16),
-      aad: EnvelopeCodec.aadOf(env),
-    );
+    final aad = EnvelopeCodec.aadOf(env);
+    final List<int> plain;
+
+    if (env.fsMode == Envelope.fsOtk) {
+      final keyId = hexEncode(env.otkKeyId);
+      final own = await prekeys.getOwnSecret(keyId);
+      if (own == null) return; // consumed/expired — replay or stale copy
+      plain = await crypto.openOtk(
+        otkPriv: own.priv,
+        otkPub: own.pub,
+        ephPub: env.ephPub,
+        senderStaticPub: env.senderPub,
+        ciphertext: cipher.sublist(0, cipher.length - 16),
+        nonce: env.nonce,
+        tag: cipher.sublist(cipher.length - 16),
+        aad: aad,
+      );
+      // Decrypt succeeded → burn the secret. THIS is the forward secrecy.
+      await prekeys.deleteOwn(keyId);
+    } else {
+      await crypto.ensureSession(
+        myKeyPair: identity.x25519KeyPair,
+        myPub: identity.x25519Pub,
+        theirPub: env.senderPub,
+      );
+      plain = await crypto.openFrom(
+        theirPub: env.senderPub,
+        ciphertext: cipher.sublist(0, cipher.length - 16),
+        nonce: env.nonce,
+        tag: cipher.sublist(cipher.length - 16),
+        aad: aad,
+      );
+    }
 
     switch (env.payloadType) {
       case Protocol.payloadText:
         await _deliverText(env, plain);
       case Protocol.payloadDeliveryReceipt:
-        await _onReceipt(utf8.decode(plain));
+        await _onReceiptPayload(env, plain);
       case Protocol.payloadMediaManifest:
         await _deliverManifest(env, plain);
       case Protocol.payloadMediaChunk:
@@ -582,6 +698,11 @@ class MeshRouter {
   Future<void> _deliverText(Envelope env, List<int> plain) async {
     final body = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
     final chatId = await _ensureChatWithSender(env, body['n'] as String?);
+    final pk = body['pk'];
+    if (pk is List) {
+      // In-band prekey replenishment, authenticated by the AEAD.
+      await prekeys.storePeerOtks(nodeIdOf(env.senderPub), pk);
+    }
     final now = DateTime.now().millisecondsSinceEpoch;
     final disappearSecs = body['d'] as int?;
     await db.into(db.messages).insertOnConflictUpdate(
@@ -699,11 +820,35 @@ class MeshRouter {
   }
 
   Future<void> _sendReceipt(Envelope original) async {
+    // Receipts double as prekey replenishment: each one carries a couple
+    // of fresh OTK publics so long conversations keep per-message FS.
+    final senderNode = nodeIdOf(original.senderPub);
     await sendDirect(
       recipientPub: original.senderPub,
       payloadType: Protocol.payloadDeliveryReceipt,
-      plaintext: utf8.encode(original.messageIdHex),
+      plaintext: utf8.encode(jsonEncode({
+        'm': original.messageIdHex,
+        'pk': await prekeys.issueTo(
+          senderNode,
+          PrekeyService.replenishPerMessage,
+        ),
+      })),
     );
+  }
+
+  Future<void> _onReceiptPayload(Envelope env, List<int> plain) async {
+    final text = utf8.decode(plain);
+    try {
+      final body = jsonDecode(text) as Map<String, Object?>;
+      final pk = body['pk'];
+      if (pk is List) {
+        // Authenticated by the AEAD — only the sender could have sealed it.
+        await prekeys.storePeerOtks(nodeIdOf(env.senderPub), pk);
+      }
+      await _onReceipt(body['m'] as String);
+    } on FormatException {
+      await _onReceipt(text); // legacy plain-string receipt
+    }
   }
 
   Future<void> _onReceipt(String deliveredMessageIdHex) async {

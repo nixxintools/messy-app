@@ -10,15 +10,22 @@ import '../../core/well_known.dart';
 import '../../data/db/database.dart';
 import '../../domain/entities/message.dart' as domain;
 import '../crypto/identity_service.dart';
+import '../crypto/prekey_service.dart';
 import '../mesh/mesh_router.dart';
 
 /// Sending + reactive queries for chats. Receiving lives in [MeshRouter].
 class ChatService {
-  ChatService({required this.db, required this.identity, required this.router});
+  ChatService({
+    required this.db,
+    required this.identity,
+    required this.router,
+    required this.prekeys,
+  });
 
   final MessyDatabase db;
   final LocalIdentity identity;
   final MeshRouter router;
+  final PrekeyService prekeys;
   final _uuid = const Uuid();
 
   Stream<List<MessageRow>> watchMessages(String chatId) {
@@ -126,6 +133,9 @@ class ChatService {
       't': text,
       'n': identity.displayName,
       'd': ?disappear,
+      // Piggyback fresh one-time prekeys so the conversation keeps
+      // per-message forward secrecy without extra round trips.
+      'pk': await prekeys.issueTo(chatId, PrekeyService.replenishPerMessage),
     }));
     await router.sendDirect(
       recipientPub: contact.x25519Pub,
