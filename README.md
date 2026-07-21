@@ -1,3 +1,7 @@
+### 📦 [**Download the APK — latest release**](https://github.com/nixxintools/messy-app/releases/latest) · Android 10+, sideload directly, no Play Store needed
+
+---
+
 <p align="center">
   <img src="assets/icon/icon.png" width="128" alt="Messy logo — a yellow mesh web">
 </p>
@@ -5,8 +9,6 @@
 # Messy
 
 **Secure messaging for the mountains, festivals, planes, and crowds — anywhere the mobile network can't reach or can't keep up.**
-
-**📦 [Download the APK — latest release](https://github.com/nixxintools/messy-app/releases/latest)** · Android 10+, sideload directly, no Play Store needed
 
 ## Why Messy exists
 
