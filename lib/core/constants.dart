@@ -18,6 +18,8 @@ abstract final class Protocol {
   static const int payloadMediaChunk = 0x03;
   static const int payloadDeliveryReceipt = 0x04;
   static const int payloadPublicText = 0x05;
+  static const int payloadGroupText = 0x06;
+  static const int payloadGroupInvite = 0x07; // sent 1:1, carries group key
 
   // Routing
   static const int ttlDirect = 8; // 1:1 messages

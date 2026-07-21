@@ -24,6 +24,20 @@ ColorScheme _messyScheme() =>
       tertiary: messyYellow,
     );
 
+ThemeData _messyTheme() {
+  // Whole-app readability bump: every text style +1px. The delta must be
+  // applied to a concrete typography (raw ThemeData styles have null sizes).
+  final typography = Typography.material2021(platform: TargetPlatform.android);
+  final sized = typography.englishLike
+      .merge(typography.white)
+      .apply(fontSizeDelta: 1);
+  return ThemeData(
+    colorScheme: _messyScheme(),
+    useMaterial3: true,
+    textTheme: sized,
+  );
+}
+
 class MessyApp extends ConsumerWidget {
   const MessyApp({super.key});
 
@@ -32,10 +46,7 @@ class MessyApp extends ConsumerWidget {
     final gate = ref.watch(appGateProvider);
     return MaterialApp(
       title: 'Messy',
-      theme: ThemeData(
-        colorScheme: _messyScheme(),
-        useMaterial3: true,
-      ),
+      theme: _messyTheme(),
       home: gate.when(
         loading: () =>
             const Scaffold(body: Center(child: CircularProgressIndicator())),

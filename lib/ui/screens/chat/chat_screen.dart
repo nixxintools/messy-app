@@ -28,6 +28,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   bool get _isPublic => widget.chatId == MeshRouter.publicRoomName;
 
+  bool get _isGroup {
+    final groups = ref.read(groupsProvider).valueOrNull ?? const [];
+    return groups.any((g) => g.groupId == widget.chatId);
+  }
+
   Future<void> _send() async {
     final text = _input.text.trim();
     if (text.isEmpty || _sending) return;
@@ -83,7 +88,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
-          if (!_isPublic)
+          if (!_isPublic && !_isGroup)
             IconButton(
               icon: const Icon(Icons.info_outline),
               onPressed: () => Navigator.of(context).push(
@@ -106,7 +111,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               _isPublic
                   ? '⚠ Readable by anyone nearby · messages vanish '
                       'after 24 h'
-                  : '\u{1F512} End-to-end encrypted',
+                  : _isGroup
+                      ? '\u{1F512} Encrypted group · only invited members '
+                          'can read'
+                      : '\u{1F512} End-to-end encrypted',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelSmall,
             ),
@@ -123,7 +131,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           SafeArea(
             child: Row(
               children: [
-                if (!_isPublic) ...[
+                // Media is 1:1 only in v1 — flooding chunks to a whole
+                // group would multiply mesh traffic per member.
+                if (!_isPublic && !_isGroup) ...[
                   IconButton(
                     icon: const Icon(Icons.photo_outlined),
                     onPressed: () => _sendMedia(video: false),

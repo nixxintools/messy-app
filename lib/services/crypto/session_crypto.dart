@@ -90,6 +90,36 @@ class SessionCrypto {
     );
   }
 
+  /// Group messages: the 32-byte group key IS the AES-256 key; whoever was
+  /// invited holds it.
+  Future<SecretBox> sealWithKey({
+    required List<int> keyBytes,
+    required List<int> plaintext,
+    required Uint8List nonce,
+    required List<int> aad,
+  }) {
+    return _aes.encrypt(
+      plaintext,
+      secretKey: SecretKey(keyBytes),
+      nonce: nonce,
+      aad: aad,
+    );
+  }
+
+  Future<List<int>> openWithKey({
+    required List<int> keyBytes,
+    required List<int> ciphertext,
+    required List<int> nonce,
+    required List<int> tag,
+    required List<int> aad,
+  }) {
+    return _aes.decrypt(
+      SecretBox(ciphertext, nonce: nonce, mac: Mac(tag)),
+      secretKey: SecretKey(keyBytes),
+      aad: aad,
+    );
+  }
+
   Future<SecretBox> sealPublic({
     required String roomName,
     required List<int> plaintext,

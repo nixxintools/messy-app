@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
@@ -44,6 +45,46 @@ class ChatService {
         ..where((c) => c.nodeId.equals(nodeId)))
       .getSingleOrNull();
 
+  Stream<List<GroupRow>> watchGroups() => db.select(db.groups).watch();
+
+  Future<GroupRow?> getGroup(String chatId) => (db.select(db.groups)
+        ..where((g) => g.groupId.equals(chatId)))
+      .getSingleOrNull();
+
+  /// Creates a group and invites the given contacts over 1:1 E2E messages.
+  Future<String> createGroup(String name, List<ContactRow> members) async {
+    final rng = Random.secure();
+    final key = Uint8List.fromList(
+      List<int>.generate(32, (_) => rng.nextInt(256)),
+    );
+    final groupId = hexEncode(sha256Bytes(key));
+    await db.into(db.groups).insert(
+          GroupsCompanion(
+            groupId: Value(groupId),
+            name: Value(name),
+            key: Value(key),
+            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+        );
+    await db.into(db.chats).insert(
+          ChatsCompanion(chatId: Value(groupId), nodeId: const Value(null)),
+          mode: InsertMode.insertOrIgnore,
+        );
+    final invite = utf8.encode(jsonEncode({
+      'g': b64u(key),
+      'name': name,
+      'n': identity.displayName,
+    }));
+    for (final member in members) {
+      await router.sendDirect(
+        recipientPub: member.x25519Pub,
+        payloadType: Protocol.payloadGroupInvite,
+        plaintext: invite,
+      );
+    }
+    return groupId;
+  }
+
   Future<void> setDisappearTimer(String chatId, int? seconds) =>
       (db.update(db.chats)..where((c) => c.chatId.equals(chatId)))
           .write(ChatsCompanion(disappearAfterSecs: Value(seconds)));
@@ -51,6 +92,10 @@ class ChatService {
   Future<void> sendText(String chatId, String text) async {
     if (chatId == MeshRouter.publicRoomName) {
       return _sendPublicText(text);
+    }
+    final group = await getGroup(chatId);
+    if (group != null) {
+      return _sendGroupText(group, text);
     }
     final contact = await (db.select(db.contacts)
           ..where((c) => c.nodeId.equals(chatId)))
@@ -86,6 +131,36 @@ class ChatService {
       payloadType: Protocol.payloadText,
       plaintext: payload,
       messageId: idBytes,
+    );
+  }
+
+  Future<void> _sendGroupText(GroupRow group, String text) async {
+    final chat = await getChat(group.groupId);
+    final disappear = chat?.disappearAfterSecs;
+    final idBytes = Uint8List.fromList(Uuid.parse(_uuid.v7()));
+    final idHex = hexEncode(idBytes);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await db.into(db.messages).insert(
+          MessagesCompanion(
+            messageId: Value(idHex),
+            chatId: Value(group.groupId),
+            direction: Value(domain.MessageDirection.outgoing.index),
+            payloadType: Value(Protocol.payloadGroupText),
+            body: Value(text),
+            senderName: Value(identity.displayName),
+            sentAt: Value(now),
+            expiresAt: Value(disappear == null ? null : now + disappear * 1000),
+            status: Value(domain.MessageStatus.sentToMesh.index),
+          ),
+        );
+    await router.sendGroup(
+      group: group,
+      messageId: idBytes,
+      plaintext: utf8.encode(jsonEncode({
+        't': text,
+        'n': identity.displayName,
+        'd': ?disappear,
+      })),
     );
   }
 

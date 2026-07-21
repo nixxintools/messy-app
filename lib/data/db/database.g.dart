@@ -3042,6 +3042,317 @@ class SeenEnvelopesCompanion extends UpdateCompanion<SeenRow> {
   }
 }
 
+class $GroupsTable extends Groups with TableInfo<$GroupsTable, GroupRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GroupsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<Uint8List> key = GeneratedColumn<Uint8List>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [groupId, name, key, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'groups';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GroupRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {groupId};
+  @override
+  GroupRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GroupRow(
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}key'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GroupsTable createAlias(String alias) {
+    return $GroupsTable(attachedDatabase, alias);
+  }
+}
+
+class GroupRow extends DataClass implements Insertable<GroupRow> {
+  final String groupId;
+  final String name;
+  final Uint8List key;
+  final int createdAt;
+  const GroupRow({
+    required this.groupId,
+    required this.name,
+    required this.key,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['group_id'] = Variable<String>(groupId);
+    map['name'] = Variable<String>(name);
+    map['key'] = Variable<Uint8List>(key);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  GroupsCompanion toCompanion(bool nullToAbsent) {
+    return GroupsCompanion(
+      groupId: Value(groupId),
+      name: Value(name),
+      key: Value(key),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory GroupRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GroupRow(
+      groupId: serializer.fromJson<String>(json['groupId']),
+      name: serializer.fromJson<String>(json['name']),
+      key: serializer.fromJson<Uint8List>(json['key']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'groupId': serializer.toJson<String>(groupId),
+      'name': serializer.toJson<String>(name),
+      'key': serializer.toJson<Uint8List>(key),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  GroupRow copyWith({
+    String? groupId,
+    String? name,
+    Uint8List? key,
+    int? createdAt,
+  }) => GroupRow(
+    groupId: groupId ?? this.groupId,
+    name: name ?? this.name,
+    key: key ?? this.key,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  GroupRow copyWithCompanion(GroupsCompanion data) {
+    return GroupRow(
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      name: data.name.present ? data.name.value : this.name,
+      key: data.key.present ? data.key.value : this.key,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupRow(')
+          ..write('groupId: $groupId, ')
+          ..write('name: $name, ')
+          ..write('key: $key, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(groupId, name, $driftBlobEquality.hash(key), createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GroupRow &&
+          other.groupId == this.groupId &&
+          other.name == this.name &&
+          $driftBlobEquality.equals(other.key, this.key) &&
+          other.createdAt == this.createdAt);
+}
+
+class GroupsCompanion extends UpdateCompanion<GroupRow> {
+  final Value<String> groupId;
+  final Value<String> name;
+  final Value<Uint8List> key;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const GroupsCompanion({
+    this.groupId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.key = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GroupsCompanion.insert({
+    required String groupId,
+    required String name,
+    required Uint8List key,
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : groupId = Value(groupId),
+       name = Value(name),
+       key = Value(key),
+       createdAt = Value(createdAt);
+  static Insertable<GroupRow> custom({
+    Expression<String>? groupId,
+    Expression<String>? name,
+    Expression<Uint8List>? key,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (groupId != null) 'group_id': groupId,
+      if (name != null) 'name': name,
+      if (key != null) 'key': key,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GroupsCompanion copyWith({
+    Value<String>? groupId,
+    Value<String>? name,
+    Value<Uint8List>? key,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return GroupsCompanion(
+      groupId: groupId ?? this.groupId,
+      name: name ?? this.name,
+      key: key ?? this.key,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (key.present) {
+      map['key'] = Variable<Uint8List>(key.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupsCompanion(')
+          ..write('groupId: $groupId, ')
+          ..write('name: $name, ')
+          ..write('key: $key, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SettingsTable extends Settings
     with TableInfo<$SettingsTable, SettingRow> {
   @override
@@ -3260,6 +3571,7 @@ abstract class _$MessyDatabase extends GeneratedDatabase {
   late final $MediaChunksTable mediaChunks = $MediaChunksTable(this);
   late final $RelayStoreTable relayStore = $RelayStoreTable(this);
   late final $SeenEnvelopesTable seenEnvelopes = $SeenEnvelopesTable(this);
+  late final $GroupsTable groups = $GroupsTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -3273,6 +3585,7 @@ abstract class _$MessyDatabase extends GeneratedDatabase {
     mediaChunks,
     relayStore,
     seenEnvelopes,
+    groups,
     settings,
   ];
 }
@@ -4855,6 +5168,181 @@ typedef $$SeenEnvelopesTableProcessedTableManager =
       SeenRow,
       PrefetchHooks Function()
     >;
+typedef $$GroupsTableCreateCompanionBuilder =
+    GroupsCompanion Function({
+      required String groupId,
+      required String name,
+      required Uint8List key,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$GroupsTableUpdateCompanionBuilder =
+    GroupsCompanion Function({
+      Value<String> groupId,
+      Value<String> name,
+      Value<Uint8List> key,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+class $$GroupsTableFilterComposer
+    extends Composer<_$MessyDatabase, $GroupsTable> {
+  $$GroupsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GroupsTableOrderingComposer
+    extends Composer<_$MessyDatabase, $GroupsTable> {
+  $$GroupsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get groupId => $composableBuilder(
+    column: $table.groupId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GroupsTableAnnotationComposer
+    extends Composer<_$MessyDatabase, $GroupsTable> {
+  $$GroupsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get groupId =>
+      $composableBuilder(column: $table.groupId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$GroupsTableTableManager
+    extends
+        RootTableManager<
+          _$MessyDatabase,
+          $GroupsTable,
+          GroupRow,
+          $$GroupsTableFilterComposer,
+          $$GroupsTableOrderingComposer,
+          $$GroupsTableAnnotationComposer,
+          $$GroupsTableCreateCompanionBuilder,
+          $$GroupsTableUpdateCompanionBuilder,
+          (GroupRow, BaseReferences<_$MessyDatabase, $GroupsTable, GroupRow>),
+          GroupRow,
+          PrefetchHooks Function()
+        > {
+  $$GroupsTableTableManager(_$MessyDatabase db, $GroupsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GroupsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GroupsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GroupsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> groupId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<Uint8List> key = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GroupsCompanion(
+                groupId: groupId,
+                name: name,
+                key: key,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String groupId,
+                required String name,
+                required Uint8List key,
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => GroupsCompanion.insert(
+                groupId: groupId,
+                name: name,
+                key: key,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GroupsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$MessyDatabase,
+      $GroupsTable,
+      GroupRow,
+      $$GroupsTableFilterComposer,
+      $$GroupsTableOrderingComposer,
+      $$GroupsTableAnnotationComposer,
+      $$GroupsTableCreateCompanionBuilder,
+      $$GroupsTableUpdateCompanionBuilder,
+      (GroupRow, BaseReferences<_$MessyDatabase, $GroupsTable, GroupRow>),
+      GroupRow,
+      PrefetchHooks Function()
+    >;
 typedef $$SettingsTableCreateCompanionBuilder =
     SettingsCompanion Function({
       required String key,
@@ -5009,6 +5497,8 @@ class $MessyDatabaseManager {
       $$RelayStoreTableTableManager(_db, _db.relayStore);
   $$SeenEnvelopesTableTableManager get seenEnvelopes =>
       $$SeenEnvelopesTableTableManager(_db, _db.seenEnvelopes);
+  $$GroupsTableTableManager get groups =>
+      $$GroupsTableTableManager(_db, _db.groups);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
 }

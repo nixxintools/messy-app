@@ -56,11 +56,12 @@ Working v1 (Android):
 - ✅ Identity + QR / nearby contact exchange
 - ✅ Encrypted 1:1 text over any shared Wi-Fi or phone hotspot
 - ✅ Public "Local" room with 24 h expiry
+- ✅ Encrypted groups — invite contacts, messages relay through any phone but only members hold the key
 - ✅ Store-and-forward mesh relaying (always on — it's what makes the mesh work)
 - ✅ Photo/video transfer with resume · videos auto-compressed to 720p
 - ✅ Disappearing messages + 24 h auto-wipe (on by default)
 - ✅ Background mesh: foreground service keeps receiving/relaying with the screen off
-- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, opportunistic internet P2P (WebRTC, serverless), forward secrecy
+- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, Bluetooth LE transport (for phones with Wi-Fi off), opportunistic internet P2P (WebRTC, serverless), forward secrecy
 
 ## Build & run
 

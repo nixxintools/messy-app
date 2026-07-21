@@ -160,6 +160,52 @@ class MeshRouter {
     return sealed.messageIdHex;
   }
 
+  /// Publishes to a group: floods like a public post (every phone relays)
+  /// but only holders of the group key can decrypt.
+  Future<String> sendGroup({
+    required GroupRow group,
+    required List<int> plaintext,
+    Uint8List? messageId,
+  }) async {
+    final id = messageId ?? _newMessageId();
+    final nonce = crypto.newNonce();
+    final tag = sha256Bytes(group.key); // routing tag, one-way from the key
+    final env = Envelope(
+      messageId: id,
+      senderPub: identity.x25519Pub,
+      recipientPub: tag,
+      ttl: Protocol.ttlDirect,
+      hopCount: 0,
+      timestampMs: DateTime.now().millisecondsSinceEpoch,
+      payloadType: Protocol.payloadGroupText,
+      chunkIndex: 0,
+      chunkTotal: 0,
+      nonce: nonce,
+      ciphertext: Uint8List(0),
+    );
+    final box = await crypto.sealWithKey(
+      keyBytes: group.key,
+      plaintext: plaintext,
+      nonce: nonce,
+      aad: EnvelopeCodec.aadOf(env),
+    );
+    final sealed = Envelope(
+      messageId: id,
+      senderPub: env.senderPub,
+      recipientPub: tag,
+      ttl: env.ttl,
+      hopCount: 0,
+      timestampMs: env.timestampMs,
+      payloadType: env.payloadType,
+      chunkIndex: 0,
+      chunkTotal: 0,
+      nonce: nonce,
+      ciphertext: concatBytes([box.cipherText, box.mac.bytes]),
+    );
+    await _publish(sealed, recipientNodeId: 'group');
+    return sealed.messageIdHex;
+  }
+
   Future<void> _publish(Envelope env, {required String recipientNodeId}) async {
     final frame = EnvelopeCodec.encode(env);
     await _markSeen(env);
@@ -255,6 +301,13 @@ class MeshRouter {
     if (env.isPublic) {
       await _deliverPublic(env);
       await _relay(env, frame, from, recipientNodeId: 'public');
+      return;
+    }
+    if (env.payloadType == Protocol.payloadGroupText) {
+      // Group posts flood like public ones — members decrypt, everyone
+      // relays. The recipient field is the group tag, not a real key.
+      await _deliverGroupIfMember(env);
+      await _relay(env, frame, from, recipientNodeId: 'group');
       return;
     }
     if (bytesEqual(env.recipientPub, identity.x25519Pub)) {
@@ -363,7 +416,78 @@ class MeshRouter {
         await _deliverManifest(env, plain);
       case Protocol.payloadMediaChunk:
         await _deliverChunk(env, plain);
+      case Protocol.payloadGroupInvite:
+        await _onGroupInvite(env, plain);
     }
+  }
+
+  Future<void> _onGroupInvite(Envelope env, List<int> plain) async {
+    final body = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
+    final key = b64uDecode(body['g'] as String);
+    if (key.length != 32) return;
+    final groupId = hexEncode(sha256Bytes(key));
+    final name = (body['name'] as String?) ?? 'Group';
+    await db.into(db.groups).insert(
+          GroupsCompanion(
+            groupId: Value(groupId),
+            name: Value(name),
+            key: Value(key),
+            createdAt: Value(DateTime.now().millisecondsSinceEpoch),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+    await db.into(db.chats).insert(
+          ChatsCompanion(chatId: Value(groupId), nodeId: const Value(null)),
+          mode: InsertMode.insertOrIgnore,
+        );
+    await _sendReceipt(env);
+    onIncoming?.call(
+      groupId,
+      name,
+      '${(body['n'] as String?) ?? 'Someone'} added you to the group',
+    );
+  }
+
+  Future<void> _deliverGroupIfMember(Envelope env) async {
+    final groupId = hexEncode(env.recipientPub);
+    final group = await (db.select(db.groups)
+          ..where((g) => g.groupId.equals(groupId)))
+        .getSingleOrNull();
+    if (group == null) return; // not a member — we just relay
+    if (bytesEqual(env.senderPub, identity.x25519Pub)) return;
+    final cipher = env.ciphertext;
+    final plain = await crypto.openWithKey(
+      keyBytes: group.key,
+      ciphertext: cipher.sublist(0, cipher.length - 16),
+      nonce: env.nonce,
+      tag: cipher.sublist(cipher.length - 16),
+      aad: EnvelopeCodec.aadOf(env),
+    );
+    final body = jsonDecode(utf8.decode(plain)) as Map<String, Object?>;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final disappearSecs = body['d'] as int?;
+    await db.into(db.messages).insertOnConflictUpdate(
+          MessagesCompanion(
+            messageId: Value(env.messageIdHex),
+            chatId: Value(groupId),
+            direction: Value(domain.MessageDirection.incoming.index),
+            payloadType: Value(env.payloadType),
+            body: Value((body['t'] as String?) ?? ''),
+            senderName: Value(body['n'] as String?),
+            senderNodeId: Value(nodeIdOf(env.senderPub)),
+            sentAt: Value(env.timestampMs),
+            receivedAt: Value(now),
+            expiresAt: Value(
+              disappearSecs == null ? null : now + disappearSecs * 1000,
+            ),
+            status: Value(domain.MessageStatus.delivered.index),
+          ),
+        );
+    onIncoming?.call(
+      groupId,
+      '${group.name} · ${(body['n'] as String?) ?? 'member'}',
+      (body['t'] as String?) ?? '',
+    );
   }
 
   Future<String> _ensureChatWithSender(Envelope env, String? name) async {

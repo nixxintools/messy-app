@@ -151,6 +151,11 @@ final messagesProvider = StreamProvider.family((ref, String chatId) async* {
   yield* core.chat.watchMessages(chatId);
 });
 
+final groupsProvider = StreamProvider((ref) async* {
+  final core = await ref.watch(coreProvider.future);
+  yield* core.chat.watchGroups();
+});
+
 final mediaProvider = StreamProvider.family((ref, String mediaId) async* {
   final core = await ref.watch(coreProvider.future);
   yield* (core.db.select(core.db.mediaItems)

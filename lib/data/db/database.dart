@@ -100,6 +100,19 @@ class SeenEnvelopes extends Table {
   Set<Column> get primaryKey => {messageId, chunkIndex};
 }
 
+/// Encrypted group chats: whoever holds `key` is a member. groupId is
+/// derived from SHA-256(key), so it can be used as an opaque routing tag.
+@DataClassName('GroupRow')
+class Groups extends Table {
+  TextColumn get groupId => text()();
+  TextColumn get name => text()();
+  BlobColumn get key => blob()();
+  IntColumn get createdAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {groupId};
+}
+
 @DataClassName('SettingRow')
 class Settings extends Table {
   TextColumn get key => text()();
@@ -118,6 +131,7 @@ class Settings extends Table {
     MediaChunks,
     RelayStore,
     SeenEnvelopes,
+    Groups,
     Settings,
   ],
 )
@@ -127,10 +141,15 @@ class MessyDatabase extends _$MessyDatabase {
   MessyDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(groups);
+          }
+        },
         beforeOpen: (details) async {
           await customStatement('PRAGMA secure_delete = ON');
           // The public room always exists.

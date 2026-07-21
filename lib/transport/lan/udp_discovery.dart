@@ -4,13 +4,14 @@ import 'dart:io';
 
 import '../link.dart';
 
-/// Peer discovery via a UDP broadcast beacon on the local subnet.
+/// Peer discovery via UDP broadcast beacons on the local subnet.
 ///
-/// Chosen over mDNS/NsdManager for v1: pure Dart, no plugin, and it works
-/// identically on home Wi-Fi and on phone hotspots (a hotspot IS a LAN —
-/// everyone connected to it shares a subnet). Beacons carry nodeId, display
-/// name, and the TCP port to dial; identity is proven later by the signed
-/// hello handshake, never by the beacon.
+/// Works on home Wi-Fi and on phone hotspots (a hotspot IS a LAN). Beacons
+/// are sent both to the limited broadcast address (255.255.255.255) and to
+/// each interface's subnet-directed broadcast (e.g. 192.168.43.255): many
+/// Android hotspot APs drop limited broadcasts between the host and its
+/// clients but pass directed ones. Identity is proven by the signed hello
+/// handshake, never by the beacon.
 class UdpDiscovery implements Discovery {
   UdpDiscovery({required this.tcpPort});
 
@@ -38,6 +39,26 @@ class UdpDiscovery implements Discovery {
   Stream<void> get changed => _changedController.stream;
 
   List<PeerAdvert> get livePeers => _live.values.toList();
+
+  /// Local IPv4 addresses (used by ConnectivityManager for gateway probing).
+  static Future<List<InternetAddress>> localAddresses() async {
+    final out = <InternetAddress>[];
+    for (final iface in await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
+      includeLinkLocal: false,
+    )) {
+      out.addAll(iface.addresses.where((a) => !a.isLoopback));
+    }
+    return out;
+  }
+
+  /// Directed /24 broadcast for an interface address (192.168.43.7 →
+  /// 192.168.43.255). Android gives no prefix length; /24 covers virtually
+  /// every hotspot and home network.
+  static InternetAddress directedBroadcast(InternetAddress addr) {
+    final parts = addr.address.split('.');
+    return InternetAddress('${parts[0]}.${parts[1]}.${parts[2]}.255');
+  }
 
   @override
   Future<void> startAdvertising({
@@ -86,9 +107,10 @@ class UdpDiscovery implements Discovery {
     _socket = socket;
   }
 
-  void _sendBeacon() {
+  Future<void> _sendBeacon() async {
     final id = _nodeId;
-    if (id == null || _socket == null) return;
+    final socket = _socket;
+    if (id == null || socket == null) return;
     final beacon = utf8.encode(jsonEncode({
       'app': 'messy',
       'v': 1,
@@ -96,10 +118,22 @@ class UdpDiscovery implements Discovery {
       'n': _displayName,
       'p': tcpPort,
     }));
+
+    final targets = <InternetAddress>{InternetAddress('255.255.255.255')};
     try {
-      _socket!.send(beacon, InternetAddress('255.255.255.255'), discoveryPort);
-    } on SocketException {
-      // No route (e.g. Wi-Fi just dropped) — the next tick retries.
+      for (final addr in await localAddresses()) {
+        targets.add(directedBroadcast(addr));
+      }
+    } on Object {
+      // Interface enumeration can fail transiently; limited broadcast
+      // remains as the fallback target.
+    }
+    for (final target in targets) {
+      try {
+        socket.send(beacon, target, discoveryPort);
+      } on SocketException {
+        // No route on this interface right now — next tick retries.
+      }
     }
   }
 

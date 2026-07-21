@@ -85,8 +85,21 @@ class ConnectivityManager {
 
   AuthenticatedLink? linkFor(String nodeId) => _links[nodeId];
 
+  /// Well-known ports tried in order so peers can be probed directly even
+  /// before a discovery beacon arrives (hotspot fallback).
+  static const knownPorts = [47490, 47491, 47492, 47493];
+
   Future<void> start() async {
-    final server = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
+    ServerSocket? server;
+    for (final port in knownPorts) {
+      try {
+        server = await ServerSocket.bind(InternetAddress.anyIPv4, port);
+        break;
+      } on SocketException {
+        continue; // port taken (another app) — try the next
+      }
+    }
+    server ??= await ServerSocket.bind(InternetAddress.anyIPv4, 0);
     _server = server;
     server.listen(_onInbound);
 
@@ -112,6 +125,44 @@ class ConnectivityManager {
       // nodeId dials.
       if (identity.nodeId.compareTo(peer.nodeId) > 0) continue;
       _dial(peer);
+    }
+    // Hotspot fallback: if beacons aren't getting through (some APs filter
+    // broadcasts entirely), probe the gateway — on a phone hotspot the
+    // host is always x.y.z.1 — on the well-known ports.
+    if (_links.isEmpty && visiblePeers.isEmpty) {
+      _probeGateways();
+    }
+  }
+
+  bool _probing = false;
+
+  Future<void> _probeGateways() async {
+    if (_probing) return;
+    _probing = true;
+    try {
+      for (final addr in await UdpDiscovery.localAddresses()) {
+        final parts = addr.address.split('.');
+        if (parts[3] == '1') continue; // we ARE the hotspot host
+        final gateway = '${parts[0]}.${parts[1]}.${parts[2]}.1';
+        for (final port in knownPorts) {
+          if (_links.isNotEmpty) return;
+          try {
+            final socket = await Socket.connect(
+              gateway,
+              port,
+              timeout: const Duration(seconds: 2),
+            );
+            await _handshake(LanLink(socket, peerNodeIdValue: '?'));
+            return; // one probe link at a time; beacons handle the rest
+          } on Object {
+            continue;
+          }
+        }
+      }
+    } on Object {
+      // Interface enumeration failed — retried next dial tick.
+    } finally {
+      _probing = false;
     }
   }
 
