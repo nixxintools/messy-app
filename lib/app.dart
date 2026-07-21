@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ui/providers/providers.dart';
 import 'ui/screens/home_shell.dart';
 import 'ui/screens/onboarding/onboarding_screen.dart';
+import 'ui/screens/radio_gate/radio_gate_screen.dart';
 import 'ui/screens/security/pin_screens.dart';
 
 const messyYellow = Color(0xFFFFD60A);
@@ -55,9 +56,28 @@ class MessyApp extends ConsumerWidget {
           AppGate.onboarding => const OnboardingScreen(),
           AppGate.pinSetup => const PinSetupScreen(),
           AppGate.locked => const PinLockScreen(),
-          AppGate.ready => const HomeShell(),
+          AppGate.ready => const _MeshGate(),
         },
       ),
     );
+  }
+}
+
+/// Ensures Bluetooth + Wi-Fi are on before the mesh boots (the core starts
+/// lazily inside HomeShell). Shown once per launch.
+class _MeshGate extends StatefulWidget {
+  const _MeshGate();
+
+  @override
+  State<_MeshGate> createState() => _MeshGateState();
+}
+
+class _MeshGateState extends State<_MeshGate> {
+  bool _ready = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_ready) return const HomeShell();
+    return RadioGateScreen(onReady: () => setState(() => _ready = true));
   }
 }

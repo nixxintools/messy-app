@@ -87,7 +87,9 @@ Working (Android), v2:
 - ✅ **Hybrid infrastructure-free mesh** — messages hop phone-to-phone across separate hotspots/networks with no shared AP, via two complementary radios (the FireChat/Open Garden approach):
   - **Bluetooth LE** — universal, low-power: each phone is at once a BLE peripheral and central, forming chains by proximity. The everywhere-baseline.
   - **Wi-Fi Aware (NAN)** — high-throughput native transport (adapted from [NodleCode's reference](https://github.com/NodleCode/wifi-aware)): peers form a data-path socket with no AP; carries media fast where hardware supports it.
-  - Both run alongside Wi-Fi/hotspot behind one transport abstraction; the router auto-picks the best available per peer. *Note: BLE and Wi-Fi Aware need on-device field testing across handsets to confirm — see [ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+  - **Wi-Fi Direct** — broadest-support no-AP path (native `WifiP2pManager`), for budget handsets that lack Wi-Fi Aware. Forms a group and runs a socket over it.
+  - All run alongside Wi-Fi/hotspot behind one transport abstraction; the router keeps every transport's link to a peer live **in parallel** and forwards over the fastest, failing over instantly when one drops. *Note: the three radios (BLE, Wi-Fi Aware, Wi-Fi Direct) need on-device field testing across handsets — see [ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+- ✅ **Startup radio gate** — prompts to enable Bluetooth + Wi-Fi before the mesh runs (both cover the transports; hotspot is suggested situationally, not required).
 - ⏳ Roadmap: programmatic Wi-Fi Direct group formation, opportunistic internet P2P (WebRTC, serverless), post-compromise security (ratcheting), FS for media via per-transfer keys
 
 ## Build & run

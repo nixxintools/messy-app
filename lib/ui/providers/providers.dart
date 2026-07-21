@@ -21,6 +21,7 @@ import '../../services/wipe/wipe_service.dart';
 import '../../transport/ble/ble_mesh.dart';
 import '../../transport/connectivity_manager.dart';
 import '../../transport/wifi_aware/wifi_aware_bridge.dart';
+import '../../transport/wifi_direct/wifi_direct_bridge.dart';
 
 /// Everything below the UI, booted once after onboarding.
 class MessyCore {
@@ -131,6 +132,15 @@ class MessyCore {
       unawaited(wifiAware.start(identity.nodeId));
     } on Object {
       // Wi-Fi Aware unsupported / off — BLE + Wi-Fi carry the mesh.
+    }
+
+    // Wi-Fi Direct — broadest-support no-shared-network path (budget phones
+    // that lack Wi-Fi Aware). Isolated + fail-safe.
+    try {
+      final wifiDirect = WifiDirectBridge(connectivity: connectivity);
+      unawaited(wifiDirect.start());
+    } on Object {
+      // Wi-Fi Direct unsupported / off — other transports carry the mesh.
     }
 
     // Message notifications: prompt for the permission (API 33+) and show a

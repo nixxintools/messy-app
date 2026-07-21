@@ -40,6 +40,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30"/>
 
+    <!-- Wi-Fi Direct (WifiP2pManager) — broadest-support no-AP transport -->
+    <uses-feature android:name="android.hardware.wifi.direct"
+        android:required="false"/>
+
     <application
         android:label="Messy"
         android:name="${applicationName}"
