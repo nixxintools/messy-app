@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
-/// Which pipe a [Link] runs over. Cost order: lan < wifiDirect < internet.
-enum LinkTransport { lan, wifiDirect, internet }
+/// Which pipe a [Link] runs over. Cost order: lan < wifiDirect < bluetooth.
+/// Bluetooth is slowest but needs no shared network — it forms the true
+/// infrastructure-free multi-hop mesh across hotspots.
+enum LinkTransport { lan, wifiDirect, internet, bluetooth }
 
 enum LinkState { connecting, up, down }
 

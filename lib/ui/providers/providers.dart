@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../services/notifications/notification_service.dart';
 import '../../data/db/database.dart';
@@ -15,6 +18,7 @@ import '../../services/mesh/mesh_router.dart';
 import '../../services/transfer/media_store.dart';
 import '../../services/transfer/transfer_service.dart';
 import '../../services/wipe/wipe_service.dart';
+import '../../transport/ble/ble_mesh.dart';
 import '../../transport/connectivity_manager.dart';
 
 /// Everything below the UI, booted once after onboarding.
@@ -100,6 +104,24 @@ class MessyCore {
     router.start();
     core.wipe.start();
     await connectivity.start();
+
+    // Bluetooth LE mesh — the infrastructure-free multi-hop path across
+    // hotspots. Fully isolated: any failure here is swallowed so the
+    // Wi-Fi/hotspot mesh above is never affected.
+    try {
+      await [
+        Permission.bluetoothScan,
+        Permission.bluetoothAdvertise,
+        Permission.bluetoothConnect,
+      ].request();
+      final ble = BleMeshTransport(
+        identity: identity,
+        connectivity: connectivity,
+      );
+      unawaited(ble.start());
+    } on Object {
+      // BLE unavailable / denied — Wi-Fi mesh continues normally.
+    }
 
     // Message notifications: prompt for the permission (API 33+) and show a
     // heads-up for messages that arrive while the app isn't in front.

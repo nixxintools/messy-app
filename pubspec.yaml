@@ -2,7 +2,7 @@ name: messy
 description: "Messy — serverless mesh messenger. E2E-encrypted messaging, photos, and video over Wi-Fi LAN, Wi-Fi Direct hotspots, and opportunistic internet P2P."
 publish_to: 'none'
 
-version: 2.1.0+1
+version: 2.2.0+1
 
 environment:
   sdk: ^3.12.2
@@ -42,6 +42,7 @@ dependencies:
   freezed_annotation: ^3.1.0
   flutter_foreground_task: ^10.0.0
   video_compress: ^3.1.4
+  bluetooth_low_energy: ^6.2.1
 
   # --- Planned (added in later phases; see docs/ARCHITECTURE.md) ---
   # flutter_p2p_connection: ^…   # Phase 3 — Wi-Fi Direct / hotspot groups

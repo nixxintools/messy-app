@@ -84,7 +84,8 @@ Working (Android), v2:
 - ✅ Authenticated public/group posts (Ed25519) — no impersonating a contact in Local
 - ✅ Moderation: block/mute a sender (hides, purges, stops relaying them), per-sender relay rate limiting, and web-of-trust blocklists shared among verified contacts
 - ✅ No auto-download in the public Media channel — tap-to-view placeholder for unverified media; delete any received media
-- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, Bluetooth LE transport (for phones with Wi-Fi off), opportunistic internet P2P (WebRTC, serverless), post-compromise security (ratcheting), FS for media via per-transfer keys
+- ✅ Bluetooth LE mesh transport — true infrastructure-free multi-hop: each phone is simultaneously a BLE peripheral and central, so messages hop phone-to-phone across separate hotspots/networks with no shared AP. Runs alongside Wi-Fi (cheapest transport wins). *Note: needs on-device field testing to confirm across handsets — see [ARCHITECTURE.md](docs/ARCHITECTURE.md).*
+- ⏳ Roadmap: programmatic Wi-Fi Direct group formation, opportunistic internet P2P (WebRTC, serverless), post-compromise security (ratcheting), FS for media via per-transfer keys
 
 ## Build & run
 

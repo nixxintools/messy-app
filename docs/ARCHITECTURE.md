@@ -81,7 +81,15 @@ abstract class Discovery {
 }
 ```
 
-All three transports reduce to a framed byte stream — LAN and Wi-Fi Direct are TCP sockets (Wi-Fi Direct just adds group formation to obtain an IP); internet is a WebRTC data channel. **One codec, one router, three pipes.**
+All transports reduce to a framed byte stream — LAN and Wi-Fi Direct are TCP sockets (Wi-Fi Direct just adds group formation to obtain an IP); internet is a WebRTC data channel; **Bluetooth LE** is a GATT connection. **One codec, one router, many pipes.**
+
+### Bluetooth LE mesh (the true multi-hop path)
+
+Wi-Fi's hard limit is that a radio joins one network at a time, so two separate hotspots can never bridge live. BLE removes that constraint: a device is simultaneously a **peripheral** (advertises + hosts a GATT server) and a **central** (scans + connects to several neighbours). A single BLE connection is full-duplex — the central writes to the peer's characteristic, the peer notifies back — so one connection per neighbour is a complete `Link`, and because a phone holds several BLE connections at once it relays between neighbours in real time. Chains A↔B↔C↔D form by proximity with **no shared network at all**.
+
+Frames are fragmented to the negotiated MTU on send and reassembled by the same `FrameReader` the TCP path uses, so the mesh layer above is unchanged — BLE links are handed to `ConnectivityManager.ingestLink` exactly like TCP links, go through the identical signed-hello handshake, and carry the identical encrypted envelopes. A per-pair tie-break (the lower nodeId dials) prevents double connections. The whole BLE subsystem is isolated and fail-safe: if Bluetooth is off, denied, or unsupported, it silently no-ops and the Wi-Fi/hotspot mesh is unaffected.
+
+**Verification status:** the BLE transport compiles, analyzes clean, and is architecturally integrated, but Bluetooth cannot be exercised on an emulator or a single device — it requires on-device testing across multiple physical handsets to confirm real-world behavior (advertising quirks, MTU, multi-connection stability vary by OEM). Treat it as field-test-pending, not yet proven.
 
 ### ConnectivityManager
 

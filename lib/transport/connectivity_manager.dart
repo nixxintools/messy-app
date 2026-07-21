@@ -152,7 +152,7 @@ class ConnectivityManager {
               port,
               timeout: const Duration(seconds: 2),
             );
-            await _handshake(LanLink(socket, peerNodeIdValue: '?'));
+            await ingestLink(LanLink(socket, peerNodeIdValue: '?'));
             return; // one probe link at a time; beacons handle the rest
           } on Object {
             continue;
@@ -177,7 +177,7 @@ class ConnectivityManager {
         int.parse(parts[1]),
         timeout: const Duration(seconds: 5),
       );
-      await _handshake(LanLink(socket, peerNodeIdValue: peer.nodeId));
+      await ingestLink(LanLink(socket, peerNodeIdValue: peer.nodeId));
     } on Object {
       // Peer gone or unreachable; the next dial tick retries.
     } finally {
@@ -186,7 +186,7 @@ class ConnectivityManager {
   }
 
   void _onInbound(Socket socket) {
-    _handshake(LanLink(socket, peerNodeIdValue: '?'));
+    ingestLink(LanLink(socket, peerNodeIdValue: '?'));
   }
 
   Map<String, Object?> _helloBody(Uint8List sig, int ts) => {
@@ -201,14 +201,15 @@ class ConnectivityManager {
   static Uint8List helloSignedPayload(Uint8List x25519Pub, int ts) =>
       concatBytes([x25519Pub, '$ts'.codeUnits]);
 
-  /// Both sides send a signed hello; the link is live once the peer's is
-  /// verified. Signature covers (x25519Pub || timestamp) with a ±5 min
-  /// replay window — v1 tradeoff, upgrade path is challenge-response.
+  /// Runs the signed hello handshake over ANY transport's [Link] (LAN TCP or
+  /// BLE) and registers the peer. Both sides send a signed hello; the link is
+  /// live once the peer's is verified. Signature covers (x25519Pub ||
+  /// timestamp) with a ±5 min replay window.
   ///
   /// One persistent frame subscription lives for the link's lifetime: the
   /// first hello completes the handshake, everything after it is routed to
   /// the [AuthenticatedLink] (buffered until the router attaches).
-  Future<void> _handshake(LanLink link) async {
+  Future<void> ingestLink(Link link) async {
     final helloCompleter = Completer<Map<String, Object?>>();
     AuthenticatedLink? auth;
     link.frames.listen((frame) {
@@ -265,7 +266,6 @@ class ConnectivityManager {
         await existing.link.close();
       }
 
-      link.peerNodeIdValue = claimedId;
       final authed = AuthenticatedLink(
         link: link,
         nodeId: claimedId,
